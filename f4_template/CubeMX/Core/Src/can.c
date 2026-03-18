@@ -442,3 +442,4 @@ uint8_t can_send_remote(can_selected_t can_selected, uint32_t can_ide,
 }
 
 /* USER CODE END 1 */
+
