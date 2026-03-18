@@ -2,6 +2,12 @@
 
 ---
 
+## 更新记录
+
+版本号：V1.0.0	日期：26/3/18
+
+---
+
 ## 简介
 
 本模板在[STM32-Template](https://github.com/Deadline039/STM32-Template)的基础上进行了改进，在对历史代码最大程度兼容的基础上，结合了[STM32CubeMX](https://www.st.com.cn/zh/development-tools/stm32cubemx.html)，[EIDE](https://em-ide.com/zh-cn/docs/intro/)，旨在提供一个便捷，灵活，高效的开发模板。
@@ -46,22 +52,22 @@
 
 ```bash
 f4_template
-├─.eide                        		# EIDE 工程配置
-├─.pack                        		# EIDE pack 依赖
-├─.vscode                      		# vscode 配置
-├── Build							# 构建生成的中间文件以及调试文件存放在此处。
-|     └── Debug
-├── CubeMX							# CubeMX 生成的文件存放在此文件夹下。
-|     ├── Core 						# 外设初始化的文件存放在此文件夹下。
-|     └── Drivers					
-|       	├── CMSIS				# CMSIS 提供的内核和启动文件在此处存放。
-|       	└── STM32F4xx_HAL_Driver # HAL库和 LL库的驱动文件存放在此处。
+├─.eide                        			# EIDE 工程配置
+├─.pack                        			# EIDE pack 依赖
+├─.vscode                      			# vscode 配置
+├── Build								# 构建生成的中间文件以及调试文件存放在此处。
+│     └── Debug
+├── CubeMX								# CubeMX 生成的文件存放在此文件夹下。
+│     ├── Core 							# 外设初始化的文件存放在此文件夹下。
+│     └── Drivers					
+│       	├── CMSIS					# CMSIS 提供的内核和启动文件在此处存放。
+│       	└── STM32F4xx_HAL_Driver 	# HAL库和 LL库的驱动文件存放在此处。
 └── User
-    ├── Application					# 存放应用层代码。
-    ├── Bsp							# 存放片外外设驱动代码。
-    ├── Middlewares					# 存放手动添加的中间件。
+    ├── Application						# 存放应用层代码。
+    ├── Bsp								# 存放片外外设驱动代码。
+    ├── Middlewares						# 存放手动添加的中间件。
     │ 	└── FreeRTOS
-    └── Utils						# 存放工具文件。
+    └── Utils							# 存放工具文件。
 
 ```
 
