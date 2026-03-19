@@ -20,7 +20,7 @@
  */
 
 #include "stm32g4xx_hal.h"
-#define USE_LPUART 1
+#define USE_LPUART 0
 
 #if USE_LPUART
 #include "stm32g4xx_ll_lpuart.h"

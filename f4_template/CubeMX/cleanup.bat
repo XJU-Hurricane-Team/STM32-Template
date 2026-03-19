@@ -71,24 +71,60 @@ for %%H in ("%CORE_INC%*.h") do (
 >> "%AGG_HEADER%" echo #endif /* __CUBEMX_H */
 
 rem -----------------------------------------------------------------
-rem 3) 删除 MDK-ARM 目录：先简单延时，给 CubeMX 一点时间释放句柄
+rem 3) 根据 .ioc 的工具链类型执行清理
+rem    - 若为 MDK-ARM：保持原逻辑，仅删除 MDK-ARM 目录
+rem    - 若为 Makefile：删除同级 Makefile 和 .s，移动 .ld 并更新 eide.yml
 rem -----------------------------------------------------------------
 
-rem 适当加长延时，避免偶尔句柄释放较慢
-rem timeout /t 8 /nobreak >nul
+rem 确定 .ioc 文件路径（优先使用与工作区同名的 .ioc）
+set "IOC_FILE="
+if defined WORKSPACE_NAME if exist "%CUBEMX_DIR%%WORKSPACE_NAME%.ioc" set "IOC_FILE=%CUBEMX_DIR%%WORKSPACE_NAME%.ioc"
+if not defined IOC_FILE (
+	for %%J in ("%CUBEMX_DIR%*.ioc") do if not defined IOC_FILE set "IOC_FILE=%%~fJ"
+)
 
-rem 脚本放在工程根目录（和 .ioc 同一层）
+if not defined IOC_FILE goto :done
+
+rem 解析 ProjectManager.TargetToolchain
+set "TARGET_TOOLCHAIN="
+for /f "usebackq tokens=1* delims==" %%A in ("%IOC_FILE%") do (
+	if /I "%%A"=="ProjectManager.TargetToolchain" (
+		set "TARGET_TOOLCHAIN=%%B"
+	)
+)
+
+rem 根据工具链分支执行：只要不是 Makefile 就按 MDK-ARM 处理
+if /I "%TARGET_TOOLCHAIN%"=="Makefile" goto :cleanup_makefile
+goto :cleanup_mdk
+
+:cleanup_mdk
+rem -----------------------------------------------------------------
+rem MDK-ARM 工程：
+rem  - 删除 MDK-ARM 目录
+rem  - 将 .eide\eide.yml 中 startup 路径中的 gcc 改为 arm
+rem -----------------------------------------------------------------
+
+rem 脚本放在 CubeMX 目录
 set "PROJECT_DIR=%~dp0"
 set "TARGET=%PROJECT_DIR%MDK-ARM"
+
+rem 更新 .eide\eide.yml 中 startup 路径：Source/gcc -> Source/arm，并将 toolchain 设为 AC6
+set "EIDE_FILE=%ROOT_DIR%.eide\eide.yml"
+if exist "%EIDE_FILE%" (
+	powershell -Command "$file = '%EIDE_FILE%'; $c = Get-Content -Path $file; $c = $c -replace 'Source/gcc/','Source/arm/'; $c = $c -replace '^\s*toolchain:.*$','    toolchain: AC6'; Set-Content -Path $file -Value $c"
+)
 
 if not exist "%TARGET%" goto :done
 
 echo Removing "%TARGET%" ...
 
+attrib -R -S -H "%PROJECT_DIR%Makefile" 2>nul
+del /F /Q "%PROJECT_DIR%Makefile" 2>nul
+
 rem 重试次数
 set "retries=10"
 
-:retry
+:retry_mdk
 rem 1. 去掉所有文件/子目录的只读/隐藏/系统属性
 attrib -R -S -H "%TARGET%\*.*" /S /D 2>nul
 
@@ -107,8 +143,66 @@ if not exist "%TARGET%" goto :done
 set /a retries-=1
 if !retries! LEQ 0 goto :done
 
-rem timeout /t 1 >nul
-goto :retry
+goto :retry_mdk
+
+:cleanup_makefile
+rem -----------------------------------------------------------------
+rem Makefile 工程：
+rem  - 删除脚本同级目录下的 Makefile 和所有 .s 文件
+rem  - 将 .ld 文件移动到 Drivers\CMSIS\Device\ST\STM32F4xx\Source\ld
+rem  - 更新 .eide\eide.yml 中的 .ld 路径
+rem  - 将 .eide\eide.yml 中 startup 路径中的 arm 改为 gcc
+rem -----------------------------------------------------------------
+
+set "PROJECT_DIR=%~dp0"
+
+rem 删除 Makefile（增加多次重试，避免文件被短暂占用导致删除失败）
+set "mf_retries=10"
+
+timeout /t 2 >nul
+
+:retry_makefile
+if not exist "%PROJECT_DIR%Makefile" goto :after_makefile
+
+rem 去掉只读/隐藏/系统属性
+attrib -R -S -H "%PROJECT_DIR%Makefile" 2>nul
+
+del /F /Q "%PROJECT_DIR%Makefile" 2>nul
+if not exist "%PROJECT_DIR%Makefile" goto :after_makefile
+
+set /a mf_retries-=1
+if !mf_retries! LEQ 0 goto :after_makefile
+
+timeout /t 1 >nul
+goto :retry_makefile
+
+:after_makefile
+
+rem 删除同级目录下所有 .s 文件
+for %%S in ("%PROJECT_DIR%*.s") do (
+	if exist "%%~fS" del /F /Q "%%~fS" 2>nul
+)
+
+rem 处理 .ld 文件：移动到 Drivers\CMSIS\Device\ST\STM32F4xx\Source\ld 目录
+set "LD_SOURCE_DIR=%PROJECT_DIR%"
+set "LD_TARGET_DIR=%ROOT_DIR%CubeMX\Drivers\CMSIS\Device\ST\STM32F4xx\Source\ld\"
+set "LD_FILE="
+
+for %%L in ("%LD_SOURCE_DIR%*.ld") do if not defined LD_FILE set "LD_FILE=%%~nxL"
+
+if not defined LD_FILE goto :done
+
+if not exist "%LD_TARGET_DIR%" mkdir "%LD_TARGET_DIR%"
+
+move /Y "%LD_SOURCE_DIR%%LD_FILE%" "%LD_TARGET_DIR%" >nul
+
+rem 更新 .eide\eide.yml 中 GCC 工具链的 scatterFilePath 以及 startup 路径中的 gcc/arm
+set "EIDE_FILE=%ROOT_DIR%.eide\eide.yml"
+if exist "%EIDE_FILE%" (
+		rem 使用刚刚移动的 ld 文件名，生成完整相对路径
+		rem 只在 GCC 段内覆盖 scatterFilePath 行，并将 toolchain 设为 GCC，不影响 AC6 段
+		powershell -Command "$file = '%EIDE_FILE%'; $ldPath = '.\CubeMX\Drivers\CMSIS\Device\ST\STM32F4xx\Source\ld\%LD_FILE%'; $c = Get-Content -Path $file; $inGcc = $false; for ($i = 0; $i -lt $c.Count; $i++) { if ($c[$i] -match '^\s*GCC:\s*$') { $inGcc = $true; continue }; if ($inGcc -and $c[$i] -match '^\s*scatterFilePath:') { $c[$i] = '        scatterFilePath: ' + $ldPath; $inGcc = $false } }; $c = $c -replace '^\s*toolchain:.*$','    toolchain: GCC'; $c = $c -replace 'Source/arm/','Source/gcc/'; Set-Content -Path $file -Value $c"
+)
 
 :done
 endlocal

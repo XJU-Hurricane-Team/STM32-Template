@@ -86,6 +86,7 @@ void task2(void *pvParameters) {
                 "STM32F4xx FreeRTOS project template.Running time: %u ms. \n",
                 xTaskGetTickCount());
         }
+        vTaskDelay(1000);
     }
 }
 
