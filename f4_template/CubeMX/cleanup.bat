@@ -28,6 +28,12 @@ if defined WORKSPACE_NAME (
 			popd
 		)
 	)
+
+	rem 令 .ioc 文件内部的 ProjectManager.ProjectFileName / ProjectManager.ProjectName 与文件名保持一致
+	set "IOC_FILE=%CUBEMX_DIR%!WORKSPACE_NAME!.ioc"
+	if exist "!IOC_FILE!" (
+		powershell -Command "$file = '!IOC_FILE!'; $name = '!WORKSPACE_NAME!'; $pf = $name + '.ioc'; $c = Get-Content -Path $file; $c | ForEach-Object { if ($_ -like 'ProjectManager.ProjectFileName=*') { 'ProjectManager.ProjectFileName=' + $pf } elseif ($_ -like 'ProjectManager.ProjectName=*') { 'ProjectManager.ProjectName=' + $name } else { $_ } } | Set-Content -Path $file"
+	)
 )
 
 rem -----------------------------------------------------------------

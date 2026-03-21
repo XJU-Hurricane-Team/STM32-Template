@@ -4,9 +4,11 @@
 
 ## 更新记录
 
-版本号：V1.0.0	日期：26/3/18	说明：初次版本发布。
+版本号：V1.0.2	日期：26/3/20	说明：添加 F1 模板（bare为裸机版本）。
 
 版本号：V1.0.1	日期：26/3/19	说明：提供编译器与芯片型号切换支持。
+
+版本号：V1.0.0	日期：26/3/18	说明：初次版本发布。
 
 ---
 
@@ -22,6 +24,7 @@
 
 模板基于 CubeMX 6.17 版本，使用的硬件信息如下：
 
+- F1 基于`stm32f103rct6`，使用的正点原子 MiniSTM32 开发板，外部晶振 8 MHz，工作频率 72 MHz。
 - F4 基于`stm32f429vet6`，使用的开发板为战队25年[ F4 主控板](https://github.com/XJU-Hurricane-Team/2025R1/blob/main/F429VE_Develop_Board.xlsx)，外部晶振 25 MHz，工作频率 180 MHz。
 - G4 基于`stm32g474vet6`，使用的开发板为战队25年[G4主控板](https://github.com/XJU-Hurricane-Team/2025R1/blob/main/G474VE_Develop_Board.xlsx)，外部晶振 25 MHz，工作频率 170 MHz。
 
@@ -87,9 +90,9 @@ CubeMX 中自动支持芯片型号的切换，点击下图所示的选项后会�
 
 ```bash
 f4_template
-├─.eide                        			# EIDE 工程配置
-├─.pack                        			# EIDE pack 依赖
-├─.vscode                      			# vscode 配置
+├─.eide                        			# EIDE 工程配置。
+├─.pack                        			# EIDE pack 依赖。
+├─.vscode                      			# vscode 配置。
 ├── Build								# 构建生成的中间文件以及调试文件存放在此处。
 │     └── Debug
 ├── CubeMX								# CubeMX 生成的文件存放在此文件夹下。
