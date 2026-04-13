@@ -51,7 +51,7 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-extern void freertos_start(void);
+extern void my_task(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -93,7 +93,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   bsp_init();
-  freertos_start();
+  my_task();
 
   /* USER CODE END 2 */
 

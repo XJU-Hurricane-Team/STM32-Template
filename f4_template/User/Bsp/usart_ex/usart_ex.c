@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #include "./ring_fifo/ring_fifo.h"
 #include <usart.h>
@@ -161,21 +162,73 @@ static uart_rx_fifo_t uart10_rx_fifo = {.buf_size = UART10_RX_DMA_BUF_SIZE,
  * @{
  */
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-folding-constant"
+
 /**
   * @brief Initialize the UART promote functions. 
   * 
   * @param huart The handle of UART.
   */
 void uart_ex_init(UART_HandleTypeDef *huart) {
+    bool rx_init_flage = false;
+    bool tx_init_flage = false;
 
     if (((huart->gState) & HAL_UART_STATE_READY) == 0) {
         /* The UART is not inited. */
         Error_Handler();
     }
-    if (huart->hdmarx != NULL) {
-        /* Initialize the UART DMA Rx. */
+
+    switch ((uint32_t)huart->Instance) {
+        case (uint32_t)USART1: {
+            rx_init_flage = USART1_RX_DMA;
+            tx_init_flage = USART1_TX_DMA;
+        } break;
+        case (uint32_t)USART2: {
+            rx_init_flage = USART2_RX_DMA;
+            tx_init_flage = USART2_TX_DMA;
+        } break;
+        case (uint32_t)USART3: {
+            rx_init_flage = USART3_RX_DMA;
+            tx_init_flage = USART3_TX_DMA;
+        } break;
+        case (uint32_t)UART4: {
+            rx_init_flage = UART4_RX_DMA;
+            tx_init_flage = UART4_TX_DMA;
+        } break;
+        case (uint32_t)UART5: {
+            rx_init_flage = UART5_RX_DMA;
+            tx_init_flage = UART5_TX_DMA;
+        } break;
+        case (uint32_t)USART6: {
+            rx_init_flage = USART6_RX_DMA;
+            tx_init_flage = USART6_TX_DMA;
+        } break;
+        case (uint32_t)UART7: {
+            rx_init_flage = UART7_RX_DMA;
+            tx_init_flage = UART7_TX_DMA;
+        } break;
+        case (uint32_t)UART8: {
+            rx_init_flage = UART8_RX_DMA;
+            tx_init_flage = UART8_TX_DMA;
+        } break;
+        // case (uint32_t)UART9: {
+        //     rx_init_flage = UART9_RX_DMA;
+        //     tx_init_flage = UART9_TX_DMA;
+        // } break;
+        // case (uint32_t)UART10: {
+        //     rx_init_flage = UART10_RX_DMA;
+        //     tx_init_flage = UART10_TX_DMA;
+        // } break;
+        default:
+            break;
+    }
+
+    /* Initialize the UART DMA Rx. */
+    if (rx_init_flage) {
         uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
-        if (uart_rx_fifo != NULL) {
+
+        if (huart->hdmarx != NULL && uart_rx_fifo != NULL) {
             uart_rx_fifo->recv_buf = malloc(uart_rx_fifo->buf_size);
             uart_rx_fifo->rx_fifo_buf = malloc(uart_rx_fifo->fifo_size);
             uart_rx_fifo->rx_fifo =
@@ -187,19 +240,19 @@ void uart_ex_init(UART_HandleTypeDef *huart) {
 
             HAL_UART_Receive_DMA(huart, uart_rx_fifo->recv_buf,
                                  uart_rx_fifo->buf_size);
+        } else {
+            Error_Handler();
         }
-    } else {
-        Error_Handler();
     }
-
-    if (huart->hdmatx != NULL) {
-        /* Initialize the UART DMA Tx. */
+    /* Initialize the UART DMA Tx. */
+    if (tx_init_flage) {
         uart_tx_buf_t *uart_tx_buf = uart_tx_identify(huart);
-        if (uart_tx_buf != NULL) {
+
+        if (huart->hdmatx != NULL && uart_tx_buf != NULL) {
             uart_tx_buf->send_buf = malloc(uart_tx_buf->buf_size);
+        } else {
+            Error_Handler();
         }
-    } else {
-        Error_Handler();
     }
 }
 
@@ -219,11 +272,13 @@ void uart_ex_deinit(UART_HandleTypeDef *huart) {
         if (uart_rx_fifo != NULL) {
             HAL_DMA_Abort(huart->hdmarx);
             free(uart_rx_fifo->recv_buf);
+            uart_rx_fifo->recv_buf = NULL;
             free(uart_rx_fifo->rx_fifo_buf);
+            uart_rx_fifo->rx_fifo_buf = NULL;
             ring_fifo_destroy(uart_rx_fifo->rx_fifo);
+            uart_rx_fifo->rx_fifo = NULL;
+            uart_rx_fifo->head_ptr = 0U;
         }
-    } else {
-        Error_Handler();
     }
 
     if (huart->hdmatx != NULL) {
@@ -232,11 +287,13 @@ void uart_ex_deinit(UART_HandleTypeDef *huart) {
         if (uart_tx_buf != NULL) {
             HAL_DMA_Abort(huart->hdmatx);
             free(uart_tx_buf->send_buf);
+            uart_tx_buf->send_buf = NULL;
+            uart_tx_buf->head_ptr = 0U;
         }
-    } else {
-        Error_Handler();
     }
 }
+
+#pragma GCC diagnostic pop
 
 /**
  * @brief Formatted print to the UART.
@@ -815,38 +872,51 @@ uint32_t uart_dmatx_get_buf_size(UART_HandleTypeDef *huart) {
  * @param huart The handle of UART.
  */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
-    __IO uint32_t error_code = 0x00U;
-
-    error_code = HAL_UART_GetError(huart);
-    if (HAL_UART_ERROR_NONE == error_code) {
+    if (huart == NULL) {
         return;
     }
 
-    switch (error_code) {
-        case HAL_UART_ERROR_PE: {
-            __HAL_UART_CLEAR_PEFLAG(huart);
-        } break;
+    uint32_t err = HAL_UART_GetError(huart);
+    if (err == HAL_UART_ERROR_NONE) {
+        return;
+    }
 
-        case HAL_UART_ERROR_NE: {
-            __HAL_UART_CLEAR_NEFLAG(huart);
-        } break;
-
-        case HAL_UART_ERROR_FE: {
-            __HAL_UART_CLEAR_FEFLAG(huart);
-        } break;
-
-        case HAL_UART_ERROR_ORE: {
-            __HAL_UART_CLEAR_OREFLAG(huart);
-        } break;
-
-        case HAL_UART_ERROR_DMA: {
-        } break;
-
-        default: {
-        } break;
+    if ((err & HAL_UART_ERROR_PE) != 0U) {
+        __HAL_UART_CLEAR_PEFLAG(huart);
+    }
+    if ((err & HAL_UART_ERROR_NE) != 0U) {
+        __HAL_UART_CLEAR_NEFLAG(huart);
+    }
+    if ((err & HAL_UART_ERROR_FE) != 0U) {
+        __HAL_UART_CLEAR_FEFLAG(huart);
+    }
+    if ((err & HAL_UART_ERROR_ORE) != 0U) {
+        __HAL_UART_CLEAR_OREFLAG(huart);
     }
 
     __HAL_UART_FLUSH_DRREGISTER(huart);
+
+    uart_rx_fifo_t *rx = uart_rx_identify(huart);
+    if ((rx == NULL) || (huart->hdmarx == NULL) || (rx->recv_buf == NULL) ||
+        (rx->buf_size == 0U)) {
+        return;
+    }
+
+    (void)HAL_UART_AbortReceive(huart);
+
+    rx->head_ptr = 0U;
+    if (rx->rx_fifo != NULL) {
+        rx->rx_fifo->head = 0U;
+        rx->rx_fifo->tail = 0U;
+    }
+
+    for (uint32_t i = 0U; i < 3U; i++) {
+        if (HAL_UART_Receive_DMA(huart, rx->recv_buf, rx->buf_size) == HAL_OK) {
+            __HAL_UART_CLEAR_IDLEFLAG(huart);
+            __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
+            return;
+        }
+    }
 }
 
 #if USE_HAL_UART_REGISTER_CALLBACKS == 0

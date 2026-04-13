@@ -109,6 +109,8 @@ targets:
       - CubeMX/Core/Src/Backup
       - CubeMX/Core/Src/sysmem.c
       - CubeMX/Core/Src/syscalls.c
+    settings:
+      debugger: cortex-debug
     toolchain: AC6
     toolchainConfigMap:
       AC6:

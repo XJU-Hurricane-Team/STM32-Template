@@ -4,6 +4,8 @@
 
 ## 更新记录
 
+版本号：V1.0.3	日期：26/4/13	说明：将`cleanup`脚本改为`python`编写来实现跨平台，改进`uart_ex`。
+
 版本号：V1.0.2	日期：26/3/20	说明：添加 F1 模板（bare为裸机版本）。
 
 版本号：V1.0.1	日期：26/3/19	说明：提供编译器与芯片型号切换支持。
@@ -117,17 +119,17 @@ f4_template
 
 ## 文件说明
 
-### cleanup.bat
+### ~~cleanup.bat~~	cleanup.py
 
-在`f4_template\CubeMX\` 路径下有名为`cleanup.bat`的脚本文件。
+在`f4_template\CubeMX\` 路径下有名为`cleanup.bat`的脚本文件（已更新为`cleanup.py`）。
 
 ![image-20260318202230759](./Picture/image-20260318202230759.png)
 
 这个脚本会在 CubeMX 生成代码后自动调用，主要完成三个任务：
 
-- 将` .ioc`文件改为工程名。
-- 删除 CubeMX 自动生成的`\MDK-ARM`目录。
-- 生成`cubemx.h`文件作为 cubemx 层的统一头文件，引用了`CubeMX/Core/Inc`下的所有 `.h`文件。
+-  保持 .ioc 文件名称与工程名称同步。
+-  重新生成 CubeMX/Core/Inc/cubemx.h 作为聚合包含头文件。
+- 运行特定工具链的清理操作和 .eide/eide.yml 更新。
 
 ![image-20260318202739470](./Picture/image-20260318202739470.png)
 

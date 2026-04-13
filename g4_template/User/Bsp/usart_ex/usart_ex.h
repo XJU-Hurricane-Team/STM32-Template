@@ -1,8 +1,8 @@
 /**
- * @file usart_pro.h
+ * @file usart_ex.h
  * @author Deadline039 PickingChip
  * @brief 
- * @version 0.1
+ * @version 0.2
  * @date 2026-03-17
  * 
  * @copyright Copyright (c) 2026
