@@ -125,6 +125,8 @@ f4_template
 
 在`f4_template\CubeMX\` 路径下有名为`cleanup.bat`的脚本文件（已更新为`cleanup.py`）。
 
+**注意**：如果要在 Liunx 平台下使用请在 CubeMX 中调用`cleanup.sh`（存放在仓库的根目录下，需要手动复制到`cleanup.py`同一目录下），通过这个脚本调用`cleanup.py`。
+
 ![image-20260318202230759](./Picture/image-20260318202230759.png)
 
 这个脚本会在 CubeMX 生成代码后自动调用，主要完成三个任务：
