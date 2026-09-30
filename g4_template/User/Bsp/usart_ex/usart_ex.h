@@ -1,12 +1,12 @@
 /**
  * @file usart_ex.h
  * @author Deadline039 PickingChip
- * @brief 
+ * @brief
  * @version 0.2
  * @date 2026-03-17
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 
 #ifndef __USART_EX_H__
@@ -24,7 +24,7 @@ extern "C" {
 
 // <h> LPUART1 Configuration
 //   <e> LPUART1_TX_DMA               Enable LPUART1 TX DMA
-#define LPUART1_TX_DMA 1
+#define LPUART1_TX_DMA 0
 
 #ifdef LPUART1_TX_DMA
 //   <o> LPUART1_TX_DMA_BUF_SIZE      LPUART1 TX DMA Buffer Size <8-4096:8>
@@ -33,7 +33,7 @@ extern "C" {
 #endif /* LPUART1_TX_DMA */
 
 //   <e> LPUART1_RX_DMA               Enable LPUART1 RX DMA
-#define LPUART1_RX_DMA 1
+#define LPUART1_RX_DMA 0
 
 #ifdef LPUART1_RX_DMA
 //   <o> LPUART1_RX_DMA_BUF_SIZE      LPUART1 RX DMA Buffer Size <8-4096:8>
@@ -170,7 +170,8 @@ extern "C" {
  * @{
  */
 
-void uart_ex_init(UART_HandleTypeDef *huart);
+void uart_ex_uart_init(UART_HandleTypeDef *huart);
+void uart_ex_init(void);
 void uart_ex_deinit(UART_HandleTypeDef *huart);
 
 int uart_printf(UART_HandleTypeDef *huart, const char *__format, ...);
