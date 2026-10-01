@@ -58,7 +58,7 @@
 
 ### 切换编译器
 
-模板默认使用 AC6 编译器，对应的 CubeMX 中选择的是 MDK-ARM 工程。
+`g4_template` 默认使用 GCC，CubeMX 的 Toolchain/IDE 选择 Makefile；其他模板目前仍默认使用 AC6，对应 MDK-ARM 工程。
 
 ![image-20260319144657570](./Picture/image-20260319144657570.png)
 
@@ -66,7 +66,11 @@
 
 ![image-20260319145004503](./Picture/image-20260319145004503.png)
 
-`cleanup.bat`脚本会自动处理EIDE的工具链设置，开发者仅需点击`Yes`重新加载配即可。
+`cleanup.py` 脚本会自动处理 EIDE 的工具链设置，开发者仅需点击 `Yes` 重新加载配置即可。G4 的 Makefile 分支会将活动工具链切换为 GCC，同时保留 AC6 编译参数，清理 MDK 生成目录，并启用 `sysmem.c` 为 newlib 的 `malloc` 提供堆边界检查。以后在 CubeMX 中选择 MDK-ARM 并重新生成，仍会按对应分支切回 AC6。
+
+这里的 Makefile 是 CubeMX 的**代码生成选项**。模板随后删除生成的 Makefile，实际由 EIDE 根据 `.eide/eide.yml` 管理源码、包含路径、编译参数和链接脚本，并调用 GCC 构建。
+
+CubeMX 也支持生成 CMake 工程，但当前模板尚未接入该构建流程。G4 的清理脚本遇到 CMake 会报不支持，避免将它误当成 MDK。若以后采用 CMake，应保留生成的 CMake 文件、启动文件和链接脚本，把 `User/` 源码、FreeRTOS、串口标准库接口及编译前检查接入用户维护的 CMake 配置，并交由 CMake Tools 或命令行构建；不宜同时让 EIDE 和 CMake 各自维护一套构建参数。参见 [ST 的 CMake 生成说明](https://community.st.com/stm32-mcus-60/cmake-integration-in-stm32cubemx-and-usage-in-stm32cubeide-for-visual-studio-code-158397) 和 [EIDE 作者关于 CMake 导入的说明](https://discuss.em-ide.com/d/687-stm32cubemx611cmakeeidecmake)。
 
 ![image-20260319145037584](./Picture/image-20260319145037584.png)
 

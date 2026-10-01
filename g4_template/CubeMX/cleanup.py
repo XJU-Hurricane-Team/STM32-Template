@@ -192,7 +192,11 @@ def update_eide_for_makefile(eide_file: Path, ld_file_name: Optional[str]) -> No
     if not eide_file.exists():
         return
 
-    lines = read_text(eide_file).splitlines()
+    text = read_text(eide_file)
+    # 只切换活动工具链，保留 AC6 配置供后续切回使用
+    # GCC/newlib 的 malloc 需要 CubeMX sysmem.c 提供有边界检查的 _sbrk
+    text = re.sub(r"^\s*- CubeMX/Core/Src/sysmem\.c[ \t]*\n", "", text, flags=re.MULTILINE)
+    lines = text.splitlines()
     out: list[str] = []
     in_gcc = False
     for line in lines:
@@ -241,7 +245,9 @@ def cleanup_makefile(cubemx_dir: Path, root_dir: Path) -> None:
 
     asm_files = sorted(cubemx_dir.glob("*.s"))
 
-    remove_file(makefile)
+    if not remove_file(makefile):
+        print(f"warning: cannot remove {makefile}; close the program holding this file")
+    remove_dir(cubemx_dir / "MDK-ARM")
     for asm in asm_files:
         remove_file(asm)
 
@@ -274,8 +280,11 @@ def run_cleanup(script_file: Path) -> int:
     print(f"target toolchain: {target_toolchain}")
     if target_toolchain.lower() == "makefile":
         cleanup_makefile(cubemx_dir, root_dir)
-    else:
+    elif target_toolchain.lower().startswith("mdk-arm"):
         cleanup_mdk(cubemx_dir, root_dir)
+    else:
+        print(f"unsupported target toolchain: {target_toolchain}, skip toolchain cleanup")
+        return 1
 
     return 0
 
