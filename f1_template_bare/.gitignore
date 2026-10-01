@@ -27,3 +27,6 @@ __MACOSX__
 
 # CubeMX backups
 *.bak
+
+# CubeMX generated makefile, EIDE builds from .eide/eide.yml
+CubeMX/Makefile
