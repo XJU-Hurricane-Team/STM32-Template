@@ -24,3 +24,6 @@ __MACOSX__
 *.uvgui
 *.uvgui.*
 *.uvguix.*
+
+# CubeMX backups
+*.bak
