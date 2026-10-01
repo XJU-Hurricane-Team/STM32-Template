@@ -58,7 +58,7 @@
 
 ### 切换编译器
 
-`f1_template`、`f4_template`、`g4_template`、`h7_template` 默认使用 GCC，CubeMX 的 Toolchain/IDE 选择 Makefile；`f1_template_bare` 仍默认使用 AC6，对应 MDK-ARM 工程。
+五个模板（`f1_template`、`f1_template_bare`、`f4_template`、`g4_template`、`h7_template`）均默认使用 GCC，CubeMX 的 Toolchain/IDE 选择 Makefile。需要回到 AC6 时，在 CubeMX 里把 Toolchain/IDE 改成 MDK-ARM 并重新生成，清理脚本会按 MDK 分支切回。
 
 ![image-20260319144657570](./Picture/image-20260319144657570.png)
 

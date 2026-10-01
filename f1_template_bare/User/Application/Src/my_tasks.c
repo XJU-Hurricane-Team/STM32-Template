@@ -41,8 +41,8 @@ void my_task(void) {
         }
 
         if (count == 100) {
-            printf("STM32F1xx bare project template. Running time: %u ms. \n",
-                   HAL_GetTick());
+            printf("STM32F1xx bare project template. Running time: %lu ms. \n",
+                   (unsigned long)HAL_GetTick());
             LED0_TOGGLE();
             LED1_TOGGLE();
             count = 0;
