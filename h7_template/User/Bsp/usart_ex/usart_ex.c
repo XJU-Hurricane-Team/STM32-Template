@@ -141,8 +141,10 @@ static uart_rx_fifo_t uart8_rx_fifo = {.buf_size = UART8_RX_DMA_BUF_SIZE,
  * @{
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-folding-constant"
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-folding-constant"
+#endif
 
 /**
   * @brief Initialize the UART promote functions. 
@@ -264,7 +266,9 @@ void uart_ex_deinit(UART_HandleTypeDef *huart) {
     }
 }
 
-#pragma GCC diagnostic pop
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 /**
  * @brief Formatted print to the UART.

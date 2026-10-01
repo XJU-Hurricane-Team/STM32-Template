@@ -31,7 +31,7 @@
 #include <stdio.h>
 
 
-#if defined(__ARMCC_VERSION)                                     
+#if defined(__ARMCC_VERSION)
   #if ((__ARMCC_VERSION >= 5000000) && (__ARMCC_VERSION < 6000000)) /* ARMCC */
     #define COMPILER_AC5 1
   #else /* ARMCLANG */
@@ -160,6 +160,41 @@ int fgetc(FILE *file) {
 }
 
 #elif (defined(__GNUC__)) /* Using ARM GCC. */
+
+#include <errno.h>
+#include <sys/stat.h>
+
+/* GCC 所用 newlib 标准库的底层接口 */
+int _fstat(int file, struct stat *st) {
+    if (file < 0 || file > 2) {
+        errno = EBADF;
+        return -1;
+    }
+    st->st_mode = S_IFCHR;
+    return 0;
+}
+
+int _isatty(int file) {
+    if (file >= 0 && file <= 2) {
+        return 1;
+    }
+    errno = EBADF;
+    return 0;
+}
+
+int _close(int file) {
+    UNUSED(file);
+    errno = EBADF;
+    return -1;
+}
+
+int _lseek(int file, int offset, int whence) {
+    UNUSED(file);
+    UNUSED(offset);
+    UNUSED(whence);
+    errno = ESPIPE;
+    return -1;
+}
 
 /**
  * @brief Write a string to file.

@@ -81,7 +81,7 @@ void task2(void *pvParameters) {
             buf[len] = '\0';   
             uart_printf(&huart1, "Received: %s.\n", buf);
         }else {
-            printf("STM32F4xx FreeRTOS project template.Running time: %u ms. \n", xTaskGetTickCount());
+            printf("STM32F4xx FreeRTOS project template.Running time: %lu ms. \n", (unsigned long)xTaskGetTickCount());
         }
 
         vTaskDelay(1000);

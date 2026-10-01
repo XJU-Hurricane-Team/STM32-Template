@@ -51,7 +51,7 @@ virtualFolder:
       folders:
         - name: startup
           files:
-            - path: CubeMX/Drivers/CMSIS/Device/ST/STM32F1xx/Source/arm/startup_stm32f103xe.s
+            - path: CubeMX/Drivers/CMSIS/Device/ST/STM32F1xx/Source/gcc/startup_stm32f103xe.s
           folders: []
 dependenceList: []
 outDir: Build
@@ -102,11 +102,10 @@ targets:
       - <virtual_root>/Drivers/HAL_Driver/stm32f1xx_hal_spi.c
       - <virtual_root>/Bsp/retarget_io.c
       - CubeMX/Core/Src/syscalls.c
-      - CubeMX/Core/Src/sysmem.c
       - CubeMX/Core/Src/Backup
     settings:
       debugger: cortex-debug
-    toolchain: AC6
+    toolchain: GCC
     toolchainConfigMap:
       AC6:
         archExtensions: ""
@@ -181,8 +180,6 @@ targets:
             output-debug-info: enable
             use-newlib-nano: true
           linker:
-            $outputTaskExcludes:
-              - .bin
             LD_FLAGS: ""
             LIB_FLAGS: -lm
             output-format: elf

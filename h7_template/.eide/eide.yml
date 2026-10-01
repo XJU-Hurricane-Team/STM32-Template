@@ -54,7 +54,7 @@ virtualFolder:
       folders:
         - name: startup
           files:
-            - path: CubeMX/Drivers/CMSIS/Device/ST/STM32H7xx/Source/arm/startup_stm32h743xx.s
+            - path: CubeMX/Drivers/CMSIS/Device/ST/STM32H7xx/Source/gcc/startup_stm32h743xx.s
           folders: []
 dependenceList: []
 outDir: build
@@ -81,11 +81,10 @@ targets:
       libList: []
     excludeList:
       - CubeMX/Core/Src/Backup
-      - CubeMX/Core/Src/sysmem.c
       - CubeMX/Core/Src/syscalls.c
     settings:
       debugger: cortex-debug
-    toolchain: AC6
+    toolchain: GCC
     toolchainConfigMap:
       AC6:
         archExtensions: ""
@@ -146,6 +145,41 @@ targets:
                 startAddr: "0x08100000"
               tag: IROM
         useCustomScatterFile: false
+      GCC:
+        archExtensions: ""
+        cpuType: Cortex-M7
+        floatingPointHardware: double
+        options:
+          version: 5
+          afterBuildTasks: []
+          asm-compiler:
+            ASM_FLAGS: ""
+          beforeBuildTasks: []
+          c/cpp-compiler:
+            CXX_FLAGS: ""
+            C_FLAGS: ""
+            language-c: c11
+            language-cpp: c++11
+            one-elf-section-per-data: true
+            one-elf-section-per-function: true
+            optimization: level-debug
+            warnings: all-warnings
+          global:
+            $float-abi-type: hard
+            misc-control: ""
+            not-use-syscalls: true
+            output-debug-info: enable
+            use-newlib-nano: true
+          linker:
+            LD_FLAGS: ""
+            LIB_FLAGS: -lm
+            output-format: elf
+            remove-unused-input-sections: true
+        scatterFilePath: .\CubeMX\Drivers\CMSIS\Device\ST\STM32H7xx\Source\ld\STM32H743XX_FLASH.ld
+        storageLayout:
+          RAM: []
+          ROM: []
+        useCustomScatterFile: true
     uploadConfigMap:
       JLink:
         baseAddr: ""
