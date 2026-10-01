@@ -216,7 +216,8 @@ extern "C" {
  * @{
  */
 
-void uart_ex_init(UART_HandleTypeDef *huart);
+void uart_ex_uart_init(UART_HandleTypeDef *huart);
+void uart_ex_init(void);
 void uart_ex_deinit(UART_HandleTypeDef *huart);
 
 int uart_printf(UART_HandleTypeDef *huart, const char *__format, ...);

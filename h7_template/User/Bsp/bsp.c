@@ -14,7 +14,7 @@
  */
 void bsp_init(void) {
     mpu_memory_protection();
-    uart_ex_init(&huart1);
+    uart_ex_init();
     can_list_add_can(can1_selected, 4, 0);
 }
 

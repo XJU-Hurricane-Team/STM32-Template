@@ -74,10 +74,10 @@ static inline uart_tx_buf_t *uart_tx_identify(UART_HandleTypeDef *huart);
  * @defgroup usart buffer.
  * @{
  */
-#ifdef USART1_TX_DMA
+#if USART1_TX_DMA
 static uart_tx_buf_t usart1_tx_buf = {.buf_size = USART1_TX_DMA_BUF_SIZE};
 #endif /* USART1_TX_DMA */
-#ifdef USART1_RX_DMA
+#if USART1_RX_DMA
 static uart_rx_fifo_t usart1_rx_fifo = {.buf_size = USART1_RX_DMA_BUF_SIZE,
                                         .fifo_size = USART1_RX_DMA_FIFO_SIZE};
 #endif /* USART1_RX_DMA */
@@ -132,7 +132,7 @@ static uart_rx_fifo_t uart5_rx_fifo = {.buf_size = UART5_RX_DMA_BUF_SIZE,
   * 
   * @param huart The handle of UART.
   */
-void uart_ex_init(UART_HandleTypeDef *huart) {
+void uart_ex_uart_init(UART_HandleTypeDef *huart) {
     bool rx_init_flage = false;
     bool tx_init_flage = false;
 
@@ -196,6 +196,24 @@ void uart_ex_init(UART_HandleTypeDef *huart) {
             Error_Handler();
         }
     }
+}
+
+void uart_ex_init(void) {
+#if USART1_RX_DMA || USART1_TX_DMA
+    uart_ex_uart_init(&huart1);
+#endif
+#if USART2_RX_DMA || USART2_TX_DMA
+    uart_ex_uart_init(&huart2);
+#endif
+#if USART3_RX_DMA || USART3_TX_DMA
+    uart_ex_uart_init(&huart3);
+#endif
+#if UART4_RX_DMA || UART4_TX_DMA
+    uart_ex_uart_init(&huart4);
+#endif
+#if UART5_RX_DMA || UART5_TX_DMA
+    uart_ex_uart_init(&huart5);
+#endif
 }
 
 /**
