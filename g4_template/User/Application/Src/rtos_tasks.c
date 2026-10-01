@@ -82,7 +82,7 @@ void task2(void *pvParameters) {
             buf[len] = '\0';
             uart_printf(&huart1, "Received: %s.\n", buf);
         } else {
-            printf(
+            printf(                         /* 默认 LPUART1 输出，阻塞发送  */
                 "STM32F4xx FreeRTOS project template.Running time: %u ms. \n",
                 xTaskGetTickCount());
         }
@@ -129,8 +129,8 @@ void task3(void *pvParameters) {
 
 #ifdef configASSERT
 /**
- * @brief FreeRTOS assert failed function. 
- * 
+ * @brief FreeRTOS assert failed function.
+ *
  * @param pcFile File name
  * @param ulLine File line
  */
@@ -156,7 +156,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
 #if configUSE_MALLOC_FAILED_HOOK
 /**
  * @brief This hook function is called when allocation failed.
- * 
+ *
  */
 void vApplicationMallocFailedHook(void) {
     fprintf(stderr, "FreeRTOS malloc failed! \n");

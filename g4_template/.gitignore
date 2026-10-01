@@ -9,6 +9,9 @@
 /obj
 /out
 
+# CubeMX backups
+*.bak
+
 # eide template
 *.ept
 *.eide-template
