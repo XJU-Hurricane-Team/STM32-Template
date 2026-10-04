@@ -38,6 +38,8 @@
 
 ## 快速使用
 
+G4 默认使用本地 USB J-Link。需要远程时，按需复制 [Debug_LAN](Debug_LAN/README.md) 工具目录；使用方法见 [README](Debug_LAN/README.md)。
+
 克隆仓库到本地。
 
 ![image-20260318212701008](./Picture/image-20260318212701008.png)
@@ -105,7 +107,7 @@ f4_template
 │     └── Debug
 ├── CubeMX								# CubeMX 生成的文件存放在此文件夹下。
 │     ├── Core 							# 外设初始化的文件存放在此文件夹下。
-│     └── Drivers					
+│     └── Drivers
 │       	├── CMSIS					# CMSIS 提供的内核和启动文件在此处存放。
 │       	└── STM32F4xx_HAL_Driver 	# HAL库和 LL库的驱动文件存放在此处。
 └── User
