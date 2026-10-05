@@ -5,6 +5,7 @@
 
 # project out
 /build
+/Build
 /bin
 /obj
 /out
