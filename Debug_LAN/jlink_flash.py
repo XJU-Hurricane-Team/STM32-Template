@@ -79,6 +79,11 @@ def find_jlink(explicit: str = "", *, windows: bool | None = None) -> Path:
         for key in ("ProgramFiles", "ProgramFiles(x86)"):
             if os.environ.get(key):
                 candidates.extend(sorted((Path(os.environ[key]) / "SEGGER").glob(f"JLink*/{name}"), reverse=True))
+        # STM32Cube installs complete SEGGER SDK bundles outside Program Files.
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            bundle_root = Path(local_app_data) / "stm32cube/bundles/jlink-gdbserver"
+            candidates.extend(sorted(bundle_root.glob(f"*/bin/{name}"), reverse=True))
     else:
         candidates.append(Path("/opt/SEGGER/JLink") / name)
     from_path = shutil.which(name)
@@ -166,6 +171,7 @@ def run_gdb(config: dict, server: Path, address: str, port: int, *, dry_run: boo
     print("[remote-jlink] GDB STARTING", flush=True)
     ready = threading.Event()
     timed_out = threading.Event()
+    communication_error = threading.Event()
     child = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              text=True, encoding="utf-8", errors="replace", bufsize=1)
 
@@ -184,7 +190,11 @@ def run_gdb(config: dict, server: Path, address: str, port: int, *, dry_run: boo
         # until GDB connects, while VS Code is still waiting for this signal.
         for character in iter(lambda: child.stdout.read(1), ""):
             pending += character
-            if not ready.is_set() and not timed_out.is_set() and "Waiting for GDB connection" in pending:
+            if "ERROR: Communication timed out" in pending:
+                communication_error.set()
+            # V9.42 may finish startup at "Connected to target" without the old prompt.
+            if (not ready.is_set() and not timed_out.is_set()
+                    and ("Waiting for GDB connection" in pending or "Connected to target" in pending)):
                 print(pending, flush=True)
                 pending = ""
                 ready.set()
@@ -196,6 +206,8 @@ def run_gdb(config: dict, server: Path, address: str, port: int, *, dry_run: boo
         if pending:
             print(pending, end="", flush=True)
         code = child.wait()
+        if communication_error.is_set() and code == 0:
+            raise ValueError("GDB Server reported a communication timeout despite exit code 0; inspect target state")
         if timed_out.is_set():
             raise ValueError("GDB Server startup timed out; inspect the SDK output above")
         if not ready.is_set() and code == 0:

@@ -61,6 +61,21 @@ class FlashTests(unittest.TestCase):
         with patch.object(flash.os, "access", return_value=False):
             self.assertFalse(flash.is_segger(exe, False))
 
+    def test_stm32cube_bundle_discovered_without_eide_or_program_files(self):
+        local = self.root / "Local AppData"
+        bundles = local / "stm32cube/bundles/jlink-gdbserver"
+        sdk = bundles / "9.42.0+st.1/bin"
+        sdk.mkdir(parents=True)
+        (sdk / "JLink.exe").touch()
+        (sdk / "JLinkARM.dll").touch()
+        incomplete = bundles / "9.99.0+st.1/bin"
+        incomplete.mkdir(parents=True)
+        (incomplete / "JLink.exe").touch()
+        with patch.dict(flash.os.environ, {"LOCALAPPDATA": str(local)}, clear=True), \
+                patch.object(flash.Path, "home", return_value=self.root / "empty home"), \
+                patch.object(flash.shutil, "which", return_value=None):
+            self.assertEqual(flash.find_jlink(windows=True), sdk / "JLink.exe")
+
     def test_dry_run_never_launches_commander(self):
         with patch.object(flash.subprocess, "run") as run:
             self.assertEqual(flash.run_flash(self.config, self.program, self.root / "JLink.exe", "192.168.28.24", dry_run=True), 0)
@@ -158,12 +173,41 @@ class FlashTests(unittest.TestCase):
                     self.assertEqual(flash.run_gdb(self.config, self.root / "server", "192.168.28.24", 2331), code)
             self.assertNotIn("GDB READY", output.getvalue())
 
+    def test_gdb_v942_connected_without_waiting_prompt(self):
+        output = io.StringIO()
+        prompt = "Listening on TCP/IP port 2331\nConnected to target\n"
+        test = self
+
+        class ConnectedStream(io.StringIO):
+            def read(self, size=-1):
+                if self.tell() == len(prompt):
+                    test.assertIn("[remote-jlink] GDB READY", output.getvalue())
+                return super().read(size)
+
+        child = MagicMock()
+        child.stdout = ConnectedStream(prompt)
+        child.wait.return_value = 0
+        child.poll.return_value = 0
+        with patch.object(flash.subprocess, "Popen", return_value=child), patch.object(flash, "check_gdb_ports"), redirect_stdout(output):
+            self.assertEqual(flash.run_gdb(self.config, self.root / "server", "192.168.28.24", 2331), 0)
+        self.assertTrue(child.stdout.closed)
+
     def test_gdb_missing_sdk_or_invalid_port_stops(self):
         with self.assertRaises(ValueError):
             flash.find_gdb_server(self.root / "JLink.exe")
         for port in (0, 65534):
             with self.assertRaises(ValueError):
                 flash.gdb_arguments(self.config, self.root / "server", "192.168.28.24", port)
+
+    def test_gdb_zero_exit_with_communication_timeout_is_failure(self):
+        child = MagicMock()
+        child.stdout = io.StringIO("Connected to target\nERROR: Communication timed out: Requested 76 bytes, received 0 bytes !\n")
+        child.wait.return_value = 0
+        child.poll.return_value = 0
+        with patch.object(flash.subprocess, "Popen", return_value=child), patch.object(flash, "check_gdb_ports"), redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, "communication timeout"):
+                flash.run_gdb(self.config, self.root / "server", "192.168.28.24", 2331)
+        self.assertTrue(child.stdout.closed)
 
     def test_gdb_occupied_port_stops_before_launch(self):
         with patch.object(flash, "check_gdb_ports", side_effect=OSError("port in use")), patch.object(flash.subprocess, "Popen") as run:
