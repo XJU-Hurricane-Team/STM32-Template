@@ -11,14 +11,14 @@
 static TaskHandle_t start_task_handle;
 void start_task(void *pvParameters);
 
-static TaskHandle_t task1_handle;
-void task1(void *pvParameters);
+static TaskHandle_t task_alive_handle;
+void task_alive(void *pvParameters);
 
-static TaskHandle_t task2_handle;
-void task2(void *pvParameters);
+static TaskHandle_t task_uart_test_handle;
+void task_uart_test(void *pvParameters);
 
-static TaskHandle_t task3_handle;
-void task3(void *pvParameters);
+static TaskHandle_t task_key_test_handle;
+void task_key_test(void *pvParameters);
 
 /*****************************************************************************/
 
@@ -40,20 +40,22 @@ void start_task(void *pvParameters) {
     UNUSED(pvParameters);
     taskENTER_CRITICAL();
 
-    xTaskCreate(task1, "task1", 128, NULL, 2, &task1_handle);
-    xTaskCreate(task2, "task2", 128, NULL, 2, &task2_handle);
-    xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
+    xTaskCreate(task_alive, "task_alive", 128, NULL, 2, &task_alive_handle);
+    xTaskCreate(task_uart_test, "task_uart_test", 512, NULL, 2,
+                &task_uart_test_handle);
+    xTaskCreate(task_key_test, "task_key_test", 512, NULL, 2,
+                &task_key_test_handle);
 
-    vTaskDelete(start_task_handle);
     taskEXIT_CRITICAL();
+    vTaskDelete(start_task_handle);
 }
 
 /**
- * @brief Task1: Blink.
+ * @brief LED heartbeat.
  *
  * @param pvParameters Start parameters.
  */
-void task1(void *pvParameters) {
+void task_alive(void *pvParameters) {
     UNUSED(pvParameters);
 
     LED0_OFF();
@@ -67,23 +69,24 @@ void task1(void *pvParameters) {
 }
 
 /**
- * @brief Task2: print running time and received data.
+ * @brief UART receive and periodic transmit test.
  *
  * @param pvParameters Start parameters.
  */
-void task2(void *pvParameters) {
+void task_uart_test(void *pvParameters) {
     UNUSED(pvParameters);
 
+    UART_HandleTypeDef *const uart = &huart1;
     uint8_t buf[20] = {0};
 
     while (1) {
-        uint32_t len = uart_dmarx_read(&huart1, buf, sizeof(buf) - 1);
+        uint32_t len = uart_dmarx_read(uart, buf, sizeof(buf) - 1);
         if (len > 0) {
             buf[len] = '\0';
-            uart_printf(&huart1, "Received: %s.\n", buf);
+            uart_printf(uart, "Received: %s.\n", buf);
         } else {
-            printf(                         /* 默认 LPUART1 输出，阻塞发送  */
-                "STM32F4xx FreeRTOS project template.Running time: %lu ms. \n",
+            uart_printf(uart,
+                "STM32G4xx UART test. Running time: %lu ms.\n",
                 (unsigned long)xTaskGetTickCount());
         }
         vTaskDelay(1000);
@@ -91,11 +94,11 @@ void task2(void *pvParameters) {
 }
 
 /**
- * @brief Task3: Scan the key and print which key pressed.
+ * @brief Key scan and event display test.
  *
  * @param pvParameters Start parameters.
  */
-void task3(void *pvParameters) {
+void task_key_test(void *pvParameters) {
     UNUSED(pvParameters);
 
     key_press_t key = KEY_NO_PRESS;
