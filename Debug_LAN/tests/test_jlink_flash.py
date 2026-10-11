@@ -17,6 +17,14 @@ def answer(ip):
 
 
 class FlashTests(unittest.TestCase):
+    def test_jsonc_preserves_string_markers_and_rejects_duplicate_keys(self):
+        text = '{/* before */ "url": "http://host/a/*value*/,}", // line\n "value": [1,2,],}'
+        self.assertEqual(flash.read_jsonc(text), {"url": "http://host/a/*value*/,}", "value": [1, 2]})
+        with self.assertRaises(ValueError):
+            flash.read_jsonc('{"Port":1,"Port":2}')
+        with self.assertRaises(ValueError):
+            flash.read_jsonc('{/*unterminated}')
+
     def test_offline_check_does_not_resolve_or_start_tools(self):
         config = self.root / "remote-jlink.json"
         config.write_text(json.dumps(self.config), encoding="utf-8")

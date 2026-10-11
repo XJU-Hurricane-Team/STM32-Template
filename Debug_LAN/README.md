@@ -152,3 +152,6 @@ Debug_LAN源码继续仅维护在本目录。便携工具使用同一jlink_flash
 开发打包使用Windows x64、Python3.12.10及requirements-build.lock的精确依赖，仅装在隔离构建环境。干净已提交源码执行`python Debug_LAN/package_tool.py --output <隔离产物目录>`；先运行原有模拟SDK单元测试，再对最终ZIP的中文空格解压路径执行真实exe版本与离线配置检查，生成摘要、清单及证据。该检查不是实机烧录、GDB或纯净Windows验收。
 
 首次0.1.0-alpha.1建立版本入口、纯离线配置校验和便携打包流程。发布标签使用debug-lan-v前缀，工具版本与Template工程版本分开。PyInstaller目录模式依据[官方文档](https://pyinstaller.org/en/stable/usage.html)，包内保留Python许可、PyInstaller许可及bootloader例外条款；不分发SEGGER组件。
+
+
+0.1.0-alpha.1已通过18项上游模拟SDK单元测试及真实最终ZIP版本/离线校验；包摘要565aacf60362a98d1e78dfcfa0623e3044f760b8b6d4d5cb4cd0a51219bd7c5e，源码967e8bc17ac258e5fd5926ffa57f083b0abb1431。硬件和纯净Windows未验收。0.1.0-alpha.2在同一来源上新增JSONC行/块注释及尾逗号读取、拒绝重复键和4MiB配置上限；保留字符串中的注释标记，未知字段继续兼容。新增源码反例测试与最终exe的JSONC检查。
