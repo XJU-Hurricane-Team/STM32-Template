@@ -17,6 +17,14 @@ def answer(ip):
 
 
 class FlashTests(unittest.TestCase):
+    def test_offline_check_does_not_resolve_or_start_tools(self):
+        config = self.root / "remote-jlink.json"
+        config.write_text(json.dumps(self.config), encoding="utf-8")
+        with patch.object(flash, "resolve_ipv4") as dns, patch.object(flash, "find_jlink") as sdk, redirect_stdout(io.StringIO()):
+            self.assertEqual(flash.main(["--check", "--config", str(config)]), 0)
+            dns.assert_not_called()
+            sdk.assert_not_called()
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory(prefix="flash test ")
         self.addCleanup(temp.cleanup)

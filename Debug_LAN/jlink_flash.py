@@ -18,6 +18,11 @@ import tempfile
 import threading
 
 
+def tool_version() -> str:
+    path = Path(__file__).resolve().with_name("VERSION")
+    return path.read_text(encoding="utf-8").strip() if path.is_file() else "unversioned-source"
+
+
 def resolve_ipv4(host: str) -> str:
     try:
         results = socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM)
@@ -228,6 +233,8 @@ def run_gdb(config: dict, server: Path, address: str, port: int, *, dry_run: boo
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=tool_version())
+    parser.add_argument("--check", action="store_true", help="Validate configuration offline; do not resolve DNS or start SEGGER")
     parser.add_argument("--config", type=Path, default=Path(__file__).resolve().with_name("remote-jlink.json"))
     parser.add_argument("--program", type=Path)
     parser.add_argument("--gdb-server", action="store_true", help="Run the local GDB Server for the VS Code debug task")
@@ -238,6 +245,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config_path = args.config.expanduser().resolve()
         config = read_config(config_path)
+        if args.check:
+            if args.program is not None:
+                command_text(args.program.expanduser().resolve())
+            print(json.dumps(dict(toolId="debug-lan", version=tool_version(), cliApiMajor=1, status="valid", hardware="not-tested", config=str(config_path))))
+            return 0
         if not args.gdb_server:
             if args.program is None:
                 parser.error("--program is required for flashing")
