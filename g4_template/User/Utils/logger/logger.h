@@ -35,7 +35,7 @@
  * @{
  */
 
-/* 输出缓冲区大小 */
+/* 输出缓冲区大小，建议至少保留64字节，避免日志长度过长 */
 #define LOG_BUFFER_SIZE       128
 /* 输出末尾换行符 */
 #define LOG_OUTPUT_NEWLINE    "\n"
@@ -77,14 +77,16 @@ typedef enum {
     LOG_WARNING, /*!< 警告信息 */
     LOG_ERROR,   /*!< 错误信息 */
     LOG_FATAL,   /*!< 致命错误 */
-    LOG_UNKNOW   /*!< 未知信息 */
+    LOG_UNKNOW,  /*!< 未知信息 */
+    LOG_FULL     /*!< 内部超长提示，不作为过滤等级使用 */
 } log_level_t;
 
 /** 初始化日志系统；在其他任务使用日志前调用一次。 */
 void log_init(log_level_t init_level);
 /** 打印日志；RTOS 下仅在允许阻塞的任务中调用。 */
-void log_message(log_level_t level, char *format, ...);
-/** 设置最低输出等级 */
+/* 正文超长时整条替换为带原时间戳的 FULL 提示。 */
+void log_message(log_level_t level, const char *format, ...);
+/** 设置最低输出等级；无效等级不修改当前设置。 */
 void log_set_level(log_level_t level);
 
 log_level_t log_get_level(void);

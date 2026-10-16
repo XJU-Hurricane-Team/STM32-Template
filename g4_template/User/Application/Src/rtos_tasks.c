@@ -20,6 +20,8 @@ void task_uart_test(void *pvParameters);
 static TaskHandle_t task_key_test_handle;
 void task_key_test(void *pvParameters);
 
+UART_HandleTypeDef *const test_uart = &huart1;
+/* 正式使用模板时，请将test任务删除，它们占用了很多RAM */
 /*****************************************************************************/
 
 /**
@@ -27,7 +29,7 @@ void task_key_test(void *pvParameters);
  *
  */
 void freertos_start(void) {
-    xTaskCreate(start_task, "start_task", 128, NULL, 2, &start_task_handle);
+    xTaskCreate(start_task, "start_task", 512, NULL, 2, &start_task_handle);
     vTaskStartScheduler();
 }
 
@@ -77,16 +79,15 @@ void task_alive(void *pvParameters) {
 void task_uart_test(void *pvParameters) {
     UNUSED(pvParameters);
 
-    UART_HandleTypeDef *const uart = &huart1;
     uint8_t buf[20] = {0};
 
     while (1) {
-        uint32_t len = uart_dmarx_read(uart, buf, sizeof(buf) - 1);
+        uint32_t len = uart_dmarx_read(test_uart, buf, sizeof(buf) - 1);
         if (len > 0) {
             buf[len] = '\0';
-            uart_printf(uart, "Received: %s.\n", buf);
+            uart_printf(test_uart, "Received: %s.\n", buf);
         } else {
-            uart_printf(uart,
+            uart_printf(test_uart,
                 "STM32G4xx UART test. Running time: %lu ms.\n",
                 (unsigned long)xTaskGetTickCount());
         }
@@ -101,6 +102,7 @@ void task_uart_test(void *pvParameters) {
  */
 void task_key_test(void *pvParameters) {
     UNUSED(pvParameters);
+    uint8_t buf[20] = {0};
 
     key_press_t key = KEY_NO_PRESS;
 
@@ -108,19 +110,19 @@ void task_key_test(void *pvParameters) {
         key = key_scan(0);
         switch (key) {
             case WKUP_PRESS: {
-                printf("Wake Up Pressed. \n");
+                uart_printf(test_uart, "Wake Up Pressed. \n", buf);
             } break;
 
             case KEY0_PRESS: {
-                printf("KEY0 Pressed. \n");
+                uart_printf(test_uart, "KEY0 Pressed. \n", buf);
             } break;
 
             case KEY1_PRESS: {
-                printf("KEY1 Pressed. \n");
+                uart_printf(test_uart, "KEY1 Pressed. \n", buf);
             } break;
 
             case KEY2_PRESS: {
-                printf("KEY2 Pressed. \n");
+                uart_printf(test_uart, "KEY2 Pressed. \n", buf);
             } break;
 
             default: {

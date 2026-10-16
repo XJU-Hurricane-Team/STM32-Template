@@ -33,10 +33,11 @@ static SemaphoreHandle_t buf_semp;
 #endif /* LOG_OUTPUT_TYPE */
 
 static char log_buffer[LOG_BUFFER_SIZE];
+static const char log_full_message[] = "Log buffer full.";
 
-static const char log_level_str[6][11] = {
+static const char log_level_str[LOG_FULL + 1][sizeof("[WARNING] ")] = {
     "[DEBUG]   ", "[INFO]    ", "[WARNING] ",
-    "[ERROR]   ", "[FATAL]   ", "[UNKNOW]  ",
+    "[ERROR]   ", "[FATAL]   ", "[UNKNOW]  ", "[FULL]    ",
 };
 
 /** 输出一段已格式化的日志。 */
@@ -61,9 +62,7 @@ static void log_output_write(const char *buffer, size_t length) {
  * @param init_level 初始等级
  */
 void log_init(log_level_t init_level) {
-    if (init_level < LOG_UNKNOW) {
-        current_level = init_level;
-    }
+    log_set_level(init_level);
 #if LOG_ENABLE
 #if LOG_USE_RTOS
 #if LOG_USE_MUTEX
@@ -90,9 +89,15 @@ void log_init(log_level_t init_level) {
  * @param format 输出字符串
  * @note 如果日志级别低于设置的级别, 将不会输出
  */
-void log_message(log_level_t level, char *format, ...) {
+void log_message(log_level_t level, const char *format, ...) {
 #if LOG_ENABLE
-    unsigned int string_length = 0;
+    size_t string_length = 0;
+    if (format == NULL) {
+        return;
+    }
+    if ((unsigned int)level > (unsigned int)LOG_UNKNOW) {
+        level = LOG_UNKNOW;
+    }
     if (level < current_level) {
         /* 日志等级低 */
         return;
@@ -104,36 +109,42 @@ void log_message(log_level_t level, char *format, ...) {
 
 #if LOG_SHOW_RUNNING_TIME
     unsigned int milliseconds = LOG_GET_RUNNING_TIME();
-    int hours = (int)((float)milliseconds / 1000.0f / 3600.0f);
-    int minute = (int)((float)milliseconds / 1000.0f / 60.0f) % 60;
-    float second = (float)milliseconds / 1000.0f - (float)hours * 3600 -
-                   (float)minute * 60;
-
-    snprintf(log_buffer, sizeof(log_buffer), "[%d:%02d:%02.3f] ", hours,
-             minute, second);
+    snprintf(log_buffer, sizeof(log_buffer), "[%u:%02u:%02u.%03u] ",
+             milliseconds / 3600000U, milliseconds / 60000U % 60U,
+             milliseconds / 1000U % 60U, milliseconds % 1000U);
     string_length = strlen(log_buffer);
 #endif /* LOG_SHOW_RUNNING_TIME */
 
-    if (level > LOG_UNKNOW) {
-        level = LOG_UNKNOW;
-    }
+    size_t level_offset = string_length;
+    memcpy(log_buffer + string_length, log_level_str[level],
+           sizeof(log_level_str[0]) - 1U);
+    string_length += sizeof(log_level_str[0]) - 1U;
 
-    strncpy(&log_buffer[string_length], log_level_str[level],
-            sizeof(log_buffer) - string_length);
-
-    string_length = strlen(log_buffer);
-
+    /* 为换行预留空间，容量包含正文终止符。 */
+    size_t body_capacity = sizeof(log_buffer) - string_length -
+                           (sizeof(LOG_OUTPUT_NEWLINE) - 1U);
     va_list args;
     va_start(args, format);
-    vsnprintf(&log_buffer[string_length], sizeof(log_buffer) - string_length,
-              format, args);
+    int body_length = vsnprintf(&log_buffer[string_length], body_capacity,
+                                format, args);
     va_end(args);
 
-    strncat(log_buffer, LOG_OUTPUT_NEWLINE,
-            sizeof(log_buffer) - strlen(log_buffer) - 1);
-    string_length = strlen(log_buffer);
-
-    log_output_write(log_buffer, string_length);
+    if (body_length >= 0) {
+        if ((size_t)body_length >= body_capacity) {
+            /* 保留本条时间戳，替换等级和正文，不递归进入加锁路径。 */
+            memcpy(log_buffer + level_offset, log_level_str[LOG_FULL],
+                   sizeof(log_level_str[0]) - 1U);
+            memcpy(log_buffer + string_length, log_full_message,
+                   sizeof(log_full_message) - 1U);
+            string_length += sizeof(log_full_message) - 1U;
+        } else {
+            string_length += (size_t)body_length;
+        }
+        memcpy(log_buffer + string_length, LOG_OUTPUT_NEWLINE,
+               sizeof(LOG_OUTPUT_NEWLINE));
+        string_length += sizeof(LOG_OUTPUT_NEWLINE) - 1U;
+        log_output_write(log_buffer, string_length);
+    }
 
 #if LOG_USE_RTOS
     xSemaphoreGive(buf_semp);
@@ -150,7 +161,9 @@ void log_message(log_level_t level, char *format, ...) {
  * @param level 日志等级
  */
 void log_set_level(log_level_t level) {
-    current_level = level;
+    if ((unsigned int)level <= (unsigned int)LOG_UNKNOW) {
+        current_level = level;
+    }
 }
 
 /**
