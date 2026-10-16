@@ -47,6 +47,7 @@ virtualFolder:
     - name: Utils
       files:
         - path: User/Utils/ring_fifo/ring_fifo.c
+        - path: User/Utils/logger/logger.c
       folders: []
     - name: CMSIS
       files: []
@@ -193,6 +194,10 @@ targets:
           ROM: []
         useCustomScatterFile: true
     uploadConfigMap:
+      Custom:
+        bin: ""
+        commandLine: python "${ProjectRoot}/Debug_LAN/jlink_flash.py" --program "${programFile}"
+        eraseChipCommand: ""
       JLink:
         baseAddr: ""
         bin: ""

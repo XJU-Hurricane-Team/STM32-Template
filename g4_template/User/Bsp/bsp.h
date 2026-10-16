@@ -20,7 +20,6 @@ extern "C" {
 #include "./can_list/can_list.h"
 #include "./DJI-Motor/dji_bldc_motor.h"
 
-
 void bsp_init(void);
 
 #ifdef __cplusplus

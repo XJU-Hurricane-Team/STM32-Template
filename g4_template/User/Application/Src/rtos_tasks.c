@@ -38,6 +38,7 @@ void freertos_start(void) {
  */
 void start_task(void *pvParameters) {
     UNUSED(pvParameters);
+    log_init(LOG_INFO);
     taskENTER_CRITICAL();
 
     xTaskCreate(task_alive, "task_alive", 128, NULL, 2, &task_alive_handle);

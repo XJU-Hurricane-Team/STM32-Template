@@ -14,6 +14,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <bsp.h>
+#include "logger/logger.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
