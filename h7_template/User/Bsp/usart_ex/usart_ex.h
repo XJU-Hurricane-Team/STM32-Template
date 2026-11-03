@@ -12,9 +12,13 @@
 #ifndef __USART_EX_H__
 #define __USART_EX_H__
 
+#include <stddef.h>
+#include <stdint.h>
+#include "stm32h7xx_hal.h"
+
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
 /*****************************************************************************
  * @defgroup Configuration Macros of USART_EX.
@@ -241,6 +245,6 @@ uint32_t uart_dmatx_get_buf_size(UART_HandleTypeDef *huart);
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
 #endif /* __USART_EX_H__ */

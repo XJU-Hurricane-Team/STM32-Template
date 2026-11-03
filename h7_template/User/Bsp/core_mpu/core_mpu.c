@@ -68,11 +68,21 @@ void mpu_memory_protection(void) {
                        MPU_ACCESS_SHAREABLE, MPU_ACCESS_CACHEABLE,
                        MPU_ACCESS_NOT_BUFFERABLE);
 
-    /* Protect SRAM1 to SRAM3, 512 KByte. */
-    mpu_set_protection(0x30000000, MPU_REGION_SIZE_512KB, MPU_REGION_NUMBER3,
-                       MPU_INSTRUCTION_ACCESS_ENABLE, MPU_REGION_FULL_ACCESS,
-                       MPU_ACCESS_NOT_SHAREABLE, MPU_ACCESS_CACHEABLE,
-                       MPU_ACCESS_BUFFERABLE);
+    /* D2 DMA storage: normal, non-cacheable memory permits unaligned memcpy. */
+    MPU_Region_InitTypeDef dma_region = {0};
+    dma_region.Enable = MPU_REGION_ENABLE;
+    dma_region.Number = MPU_REGION_NUMBER3;
+    dma_region.BaseAddress = 0x30000000;
+    dma_region.Size = MPU_REGION_SIZE_512KB;
+    dma_region.TypeExtField = MPU_TEX_LEVEL1;
+    dma_region.AccessPermission = MPU_REGION_FULL_ACCESS;
+    dma_region.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+    dma_region.IsShareable = MPU_ACCESS_SHAREABLE;
+    dma_region.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+    dma_region.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+    HAL_MPU_Disable();
+    HAL_MPU_ConfigRegion(&dma_region);
+    HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
     /* Protect SRAM4, 64 KByte. */
     mpu_set_protection(0x38000000, MPU_REGION_SIZE_64KB, MPU_REGION_NUMBER4,

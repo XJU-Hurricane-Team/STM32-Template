@@ -184,6 +184,19 @@ def update_eide_for_mdk(eide_file: Path) -> None:
     text = read_text(eide_file)
     text = text.replace("Source/gcc/", "Source/arm/")
     text = re.sub(r"^(\s*toolchain:\s*).*$", r"\1AC6", text, flags=re.MULTILINE)
+    # 切换 AC6 时仍须将 DMA 段放入 D2 SRAM，不能交给默认 DTCM 布局。
+    text = re.sub(
+        r"(AC6:[\s\S]*?scatterFilePath:)[^\n]*",
+        r"\1 User/Bsp/usart_ex/stm32h743_dma.sct",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"(AC6:[\s\S]*?useCustomScatterFile:)[^\n]*",
+        r"\1 true",
+        text,
+        count=1,
+    )
     write_text(eide_file, text)
 
 
@@ -254,6 +267,26 @@ def cleanup_makefile(cubemx_dir: Path, root_dir: Path) -> None:
     if ld_source:
         ld_target_dir.mkdir(parents=True, exist_ok=True)
         shutil.move(str(ld_source), str(ld_target_dir / ld_source.name))
+
+    # CubeMX 重新生成的链接脚本不包含用户 DMA 段。
+    for ld_file in ld_target_dir.glob("*.ld"):
+        text = read_text(ld_file)
+        if ".dma_buffer" not in text:
+            dma_section = """  /* DMA storage is initialized by the UART driver, not startup. */
+  .dma_buffer (NOLOAD) :
+  {
+    . = ALIGN(32);
+    _sdma_buffer = .;
+    *(.dma_buffer .dma_buffer.*)
+    . = ALIGN(32);
+    _edma_buffer = .;
+  } >RAM_D2
+
+"""
+            marker = "  /* User_heap_stack section"
+            if "RAM_D2" not in text or marker not in text:
+                raise ValueError(f"cannot place DMA buffers in {ld_file}")
+            write_text(ld_file, text.replace(marker, dma_section + marker, 1))
 
     update_eide_for_makefile(eide_file, ld_file_name)
 

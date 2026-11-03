@@ -1,13 +1,15 @@
 /**
  * @file usart_ex.c
  * @author Deadline039 PickingChip
- * @brief 
+ * @brief
  * @version 0.2
  * @date 2026-03-17
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
+
+#include "usart_ex.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -17,15 +19,23 @@
 
 #include "./ring_fifo/ring_fifo.h"
 #include <usart.h>
-#include "usart_ex.h"
 
 /*****************************************************************************
  * @defgroup Private types and variables of UART.
  * @{
  */
 
+/* AC6 needs a .bss name so the scatter NOINIT region stays uninitialized. */
+#if defined(__ARMCC_VERSION)
+#define UART_DMA_STORAGE \
+    __attribute__((section(".bss.dma_buffer"), aligned(32)))
+#else /* __ARMCC_VERSION */
+#define UART_DMA_STORAGE \
+    __attribute__((section(".dma_buffer"), aligned(32)))
+#endif /* __ARMCC_VERSION */
+
 /* The buf of `uart_printf` and `uart_scanf`. */
-static char uart_buffer[256];
+static char uart_buffer[256] UART_DMA_STORAGE;
 
 /**
  * @brief Send buf of UART.
@@ -35,6 +45,7 @@ typedef struct {
     uint32_t head_ptr; /*!< Pointer of send buf to control the length of DMA
                             transfer.                                       */
     size_t buf_size;   /*!< The size of buffer. Prevent overflow.           */
+    const size_t capacity; /*!< Fixed DMA storage capacity. */
 } uart_tx_buf_t;
 
 /**
@@ -48,6 +59,7 @@ typedef struct {
                                control the DMA receive.      */
     uint32_t buf_size;    /*!< Size of `recv_buf`.           */
     uint32_t fifo_size;   /*!< Size of `rx_fifo_buf`.        */
+    const uint32_t capacity; /*!< Fixed DMA storage capacity. */
 } uart_rx_fifo_t;
 
 /**
@@ -76,60 +88,124 @@ static inline uart_tx_buf_t *uart_tx_identify(UART_HandleTypeDef *huart);
  */
 
 #if USART1_TX_DMA
-static uart_tx_buf_t usart1_tx_buf = {.buf_size = USART1_TX_DMA_BUF_SIZE};
+static uint8_t usart1_tx_dma_buf[USART1_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t usart1_tx_buf = {
+    .send_buf = usart1_tx_dma_buf,
+    .buf_size = USART1_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(usart1_tx_dma_buf)};
 #endif /* USART1_TX_DMA */
 #if USART1_RX_DMA
-static uart_rx_fifo_t usart1_rx_fifo = {.buf_size = USART1_RX_DMA_BUF_SIZE,
-                                        .fifo_size = USART1_RX_DMA_FIFO_SIZE};
+static uint8_t usart1_rx_dma_buf[USART1_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t usart1_rx_fifo = {
+    .recv_buf = usart1_rx_dma_buf,
+    .buf_size = USART1_RX_DMA_BUF_SIZE,
+    .fifo_size = USART1_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(usart1_rx_dma_buf)};
 #endif /* USART1_RX_DMA */
 #if USART2_TX_DMA
-static uart_tx_buf_t usart2_tx_buf = {.buf_size = USART2_TX_DMA_BUF_SIZE};
+static uint8_t usart2_tx_dma_buf[USART2_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t usart2_tx_buf = {
+    .send_buf = usart2_tx_dma_buf,
+    .buf_size = USART2_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(usart2_tx_dma_buf)};
 #endif /* USART2_TX_DMA */
 #if USART2_RX_DMA
-static uart_rx_fifo_t usart2_rx_fifo = {.buf_size = USART2_RX_DMA_BUF_SIZE,
-                                        .fifo_size = USART2_RX_DMA_FIFO_SIZE};
+static uint8_t usart2_rx_dma_buf[USART2_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t usart2_rx_fifo = {
+    .recv_buf = usart2_rx_dma_buf,
+    .buf_size = USART2_RX_DMA_BUF_SIZE,
+    .fifo_size = USART2_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(usart2_rx_dma_buf)};
 #endif /* USART2_RX_DMA */
 #if USART3_TX_DMA
-static uart_tx_buf_t usart3_tx_buf = {.buf_size = USART3_TX_DMA_BUF_SIZE};
+static uint8_t usart3_tx_dma_buf[USART3_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t usart3_tx_buf = {
+    .send_buf = usart3_tx_dma_buf,
+    .buf_size = USART3_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(usart3_tx_dma_buf)};
 #endif /* USART3_TX_DMA */
 #if USART3_RX_DMA
-static uart_rx_fifo_t usart3_rx_fifo = {.buf_size = USART3_RX_DMA_BUF_SIZE,
-                                        .fifo_size = USART3_RX_DMA_FIFO_SIZE};
+static uint8_t usart3_rx_dma_buf[USART3_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t usart3_rx_fifo = {
+    .recv_buf = usart3_rx_dma_buf,
+    .buf_size = USART3_RX_DMA_BUF_SIZE,
+    .fifo_size = USART3_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(usart3_rx_dma_buf)};
 #endif /* USART3_RX_DMA */
 #if UART4_TX_DMA
-static uart_tx_buf_t uart4_tx_buf = {.buf_size = UART4_TX_DMA_BUF_SIZE};
+static uint8_t uart4_tx_dma_buf[UART4_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t uart4_tx_buf = {
+    .send_buf = uart4_tx_dma_buf,
+    .buf_size = UART4_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(uart4_tx_dma_buf)};
 #endif /* UART4_TX_DMA */
 #if UART4_RX_DMA
-static uart_rx_fifo_t uart4_rx_fifo = {.buf_size = UART4_RX_DMA_BUF_SIZE,
-                                       .fifo_size = UART4_RX_DMA_FIFO_SIZE};
+static uint8_t uart4_rx_dma_buf[UART4_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t uart4_rx_fifo = {
+    .recv_buf = uart4_rx_dma_buf,
+    .buf_size = UART4_RX_DMA_BUF_SIZE,
+    .fifo_size = UART4_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(uart4_rx_dma_buf)};
 #endif /* UART4_RX_DMA */
 #if UART5_TX_DMA
-static uart_tx_buf_t uart5_tx_buf = {.buf_size = UART5_TX_DMA_BUF_SIZE};
+static uint8_t uart5_tx_dma_buf[UART5_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t uart5_tx_buf = {
+    .send_buf = uart5_tx_dma_buf,
+    .buf_size = UART5_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(uart5_tx_dma_buf)};
 #endif /* UART5_TX_DMA */
 #if UART5_RX_DMA
-static uart_rx_fifo_t uart5_rx_fifo = {.buf_size = UART5_RX_DMA_BUF_SIZE,
-                                       .fifo_size = UART5_RX_DMA_FIFO_SIZE};
+static uint8_t uart5_rx_dma_buf[UART5_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t uart5_rx_fifo = {
+    .recv_buf = uart5_rx_dma_buf,
+    .buf_size = UART5_RX_DMA_BUF_SIZE,
+    .fifo_size = UART5_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(uart5_rx_dma_buf)};
 #endif /* UART5_RX_DMA */
 #if USART6_TX_DMA
-static uart_tx_buf_t usart6_tx_buf = {.buf_size = USART6_TX_DMA_BUF_SIZE};
+static uint8_t usart6_tx_dma_buf[USART6_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t usart6_tx_buf = {
+    .send_buf = usart6_tx_dma_buf,
+    .buf_size = USART6_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(usart6_tx_dma_buf)};
 #endif /* USART6_TX_DMA */
 #if USART6_RX_DMA
-static uart_rx_fifo_t usart6_rx_fifo = {.buf_size = USART6_RX_DMA_BUF_SIZE,
-                                        .fifo_size = USART6_RX_DMA_FIFO_SIZE};
+static uint8_t usart6_rx_dma_buf[USART6_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t usart6_rx_fifo = {
+    .recv_buf = usart6_rx_dma_buf,
+    .buf_size = USART6_RX_DMA_BUF_SIZE,
+    .fifo_size = USART6_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(usart6_rx_dma_buf)};
 #endif /* USART6_RX_DMA */
 #if UART7_TX_DMA
-static uart_tx_buf_t uart7_tx_buf = {.buf_size = UART7_TX_DMA_BUF_SIZE};
+static uint8_t uart7_tx_dma_buf[UART7_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t uart7_tx_buf = {
+    .send_buf = uart7_tx_dma_buf,
+    .buf_size = UART7_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(uart7_tx_dma_buf)};
 #endif /* UART7_TX_DMA */
 #if UART7_RX_DMA
-static uart_rx_fifo_t uart7_rx_fifo = {.buf_size = UART7_RX_DMA_BUF_SIZE,
-                                       .fifo_size = UART7_RX_DMA_FIFO_SIZE};
+static uint8_t uart7_rx_dma_buf[UART7_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t uart7_rx_fifo = {
+    .recv_buf = uart7_rx_dma_buf,
+    .buf_size = UART7_RX_DMA_BUF_SIZE,
+    .fifo_size = UART7_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(uart7_rx_dma_buf)};
 #endif /* UART7_RX_DMA */
 #if UART8_TX_DMA
-static uart_tx_buf_t uart8_tx_buf = {.buf_size = UART8_TX_DMA_BUF_SIZE};
+static uint8_t uart8_tx_dma_buf[UART8_TX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_tx_buf_t uart8_tx_buf = {
+    .send_buf = uart8_tx_dma_buf,
+    .buf_size = UART8_TX_DMA_BUF_SIZE,
+    .capacity = sizeof(uart8_tx_dma_buf)};
 #endif /* UART8_TX_DMA */
 #if UART8_RX_DMA
-static uart_rx_fifo_t uart8_rx_fifo = {.buf_size = UART8_RX_DMA_BUF_SIZE,
-                                       .fifo_size = UART8_RX_DMA_FIFO_SIZE};
+static uint8_t uart8_rx_dma_buf[UART8_RX_DMA_BUF_SIZE] UART_DMA_STORAGE;
+static uart_rx_fifo_t uart8_rx_fifo = {
+    .recv_buf = uart8_rx_dma_buf,
+    .buf_size = UART8_RX_DMA_BUF_SIZE,
+    .fifo_size = UART8_RX_DMA_FIFO_SIZE,
+    .capacity = sizeof(uart8_rx_dma_buf)};
 #endif /* UART8_RX_DMA */
 
 /**
@@ -144,20 +220,21 @@ static uart_rx_fifo_t uart8_rx_fifo = {.buf_size = UART8_RX_DMA_BUF_SIZE,
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-folding-constant"
-#endif
+#endif /* __clang__ */
 
 /**
-  * @brief Initialize the UART promote functions. 
-  * 
+  * @brief Initialize the UART promote functions.
+  *
   * @param huart The handle of UART.
   */
 void uart_ex_uart_init(UART_HandleTypeDef *huart) {
     bool rx_init_flage = false;
     bool tx_init_flage = false;
 
-    if (((huart->gState) & HAL_UART_STATE_READY) == 0) {
-        /* The UART is not inited. */
+    if (huart == NULL ||
+        ((huart->gState & HAL_UART_STATE_READY) == 0)) {
         Error_Handler();
+        return;
     }
 
     switch ((uint32_t)huart->Instance) {
@@ -181,7 +258,7 @@ void uart_ex_uart_init(UART_HandleTypeDef *huart) {
             rx_init_flage = UART5_RX_DMA;
             tx_init_flage = UART5_TX_DMA;
         } break;
-                case (uint32_t)USART6: {
+        case (uint32_t)USART6: {
             rx_init_flage = USART6_RX_DMA;
             tx_init_flage = USART6_TX_DMA;
         } break;
@@ -197,86 +274,112 @@ void uart_ex_uart_init(UART_HandleTypeDef *huart) {
             break;
     }
 
+    if (rx_init_flage || tx_init_flage) {
+        __HAL_RCC_D2SRAM1_CLK_ENABLE();
+        __HAL_RCC_D2SRAM2_CLK_ENABLE();
+        __HAL_RCC_D2SRAM3_CLK_ENABLE();
+    }
+
     /* Initialize the UART DMA Rx. */
     if (rx_init_flage) {
         uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
 
-        if (huart->hdmarx != NULL && uart_rx_fifo != NULL) {
-            uart_rx_fifo->recv_buf = malloc(uart_rx_fifo->buf_size);
+        if (huart->hdmarx != NULL) {
+            if (uart_rx_fifo->rx_fifo != NULL) {
+                return;
+            }
+            if (uart_rx_fifo->buf_size == 0 ||
+                uart_rx_fifo->buf_size > UINT16_MAX) {
+                Error_Handler();
+                return;
+            }
             uart_rx_fifo->rx_fifo_buf = malloc(uart_rx_fifo->fifo_size);
-            uart_rx_fifo->rx_fifo =
-                ring_fifo_init(uart_rx_fifo->rx_fifo_buf,
-                               uart_rx_fifo->fifo_size, RF_TYPE_STREAM);
-
-            __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
+            if (uart_rx_fifo->rx_fifo_buf != NULL) {
+                uart_rx_fifo->rx_fifo =
+                    ring_fifo_init(uart_rx_fifo->rx_fifo_buf,
+                                   uart_rx_fifo->fifo_size, RF_TYPE_STREAM);
+            }
+            if (uart_rx_fifo->rx_fifo == NULL) {
+                free(uart_rx_fifo->rx_fifo_buf);
+                uart_rx_fifo->rx_fifo_buf = NULL;
+                Error_Handler();
+                return;
+            }
+            uart_rx_fifo->head_ptr = 0U;
+            if (HAL_UART_Receive_DMA(huart, uart_rx_fifo->recv_buf,
+                                     uart_rx_fifo->buf_size) != HAL_OK) {
+                ring_fifo_destroy(uart_rx_fifo->rx_fifo);
+                uart_rx_fifo->rx_fifo = NULL;
+                free(uart_rx_fifo->rx_fifo_buf);
+                uart_rx_fifo->rx_fifo_buf = NULL;
+                Error_Handler();
+                return;
+            }
             __HAL_UART_CLEAR_IDLEFLAG(huart);
-
-            HAL_UART_Receive_DMA(huart, uart_rx_fifo->recv_buf,
-                                 uart_rx_fifo->buf_size);
+            __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);
         } else {
             Error_Handler();
         }
     }
     /* Initialize the UART DMA Tx. */
-    if (tx_init_flage) {
-        uart_tx_buf_t *uart_tx_buf = uart_tx_identify(huart);
-
-        if (huart->hdmatx != NULL && uart_tx_buf != NULL) {
-            uart_tx_buf->send_buf = malloc(uart_tx_buf->buf_size);
-        } else {
-            Error_Handler();
-        }
+    if (tx_init_flage && huart->hdmatx == NULL) {
+        Error_Handler();
     }
 }
 
 void uart_ex_init(void) {
 #if USART1_RX_DMA || USART1_TX_DMA
     uart_ex_uart_init(&huart1);
-#endif
+#endif /* USART1_RX_DMA || USART1_TX_DMA */
 #if USART2_RX_DMA || USART2_TX_DMA
     uart_ex_uart_init(&huart2);
-#endif
+#endif /* USART2_RX_DMA || USART2_TX_DMA */
 #if USART3_RX_DMA || USART3_TX_DMA
     uart_ex_uart_init(&huart3);
-#endif
+#endif /* USART3_RX_DMA || USART3_TX_DMA */
 #if UART4_RX_DMA || UART4_TX_DMA
     uart_ex_uart_init(&huart4);
-#endif
+#endif /* UART4_RX_DMA || UART4_TX_DMA */
 #if UART5_RX_DMA || UART5_TX_DMA
     uart_ex_uart_init(&huart5);
-#endif
+#endif /* UART5_RX_DMA || UART5_TX_DMA */
 #if USART6_RX_DMA || USART6_TX_DMA
     uart_ex_uart_init(&huart6);
-#endif
+#endif /* USART6_RX_DMA || USART6_TX_DMA */
 #if UART7_RX_DMA || UART7_TX_DMA
     uart_ex_uart_init(&huart7);
-#endif
+#endif /* UART7_RX_DMA || UART7_TX_DMA */
 #if UART8_RX_DMA || UART8_TX_DMA
     uart_ex_uart_init(&huart8);
-#endif
+#endif /* UART8_RX_DMA || UART8_TX_DMA */
 }
 
 /**
  * @brief Deinitialize the UART promote functions.
- * 
+ *
  * @param huart The handle of UART.
  */
 void uart_ex_deinit(UART_HandleTypeDef *huart) {
-    if (((huart->gState) & HAL_UART_STATE_READY) == 0) {
-        /* The UART is not inited. */
+    if (huart == NULL ||
+        ((huart->gState & HAL_UART_STATE_READY) == 0)) {
         Error_Handler();
+        return;
     }
     if (huart->hdmarx != NULL) {
         /* Initialize the UART DMA Rx. */
         uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
         if (uart_rx_fifo != NULL) {
-            HAL_DMA_Abort(huart->hdmarx);
-            free(uart_rx_fifo->recv_buf);
-            uart_rx_fifo->recv_buf = NULL;
+            __HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);
+            if (HAL_UART_AbortReceive(huart) != HAL_OK) {
+                Error_Handler();
+                return;
+            }
             free(uart_rx_fifo->rx_fifo_buf);
             uart_rx_fifo->rx_fifo_buf = NULL;
-            ring_fifo_destroy(uart_rx_fifo->rx_fifo);
-            uart_rx_fifo->rx_fifo = NULL;
+            if (uart_rx_fifo->rx_fifo != NULL) {
+                ring_fifo_destroy(uart_rx_fifo->rx_fifo);
+                uart_rx_fifo->rx_fifo = NULL;
+            }
             uart_rx_fifo->head_ptr = 0U;
         }
     }
@@ -285,9 +388,10 @@ void uart_ex_deinit(UART_HandleTypeDef *huart) {
         /* Initialize the UART DMA Tx. */
         uart_tx_buf_t *uart_tx_buf = uart_tx_identify(huart);
         if (uart_tx_buf != NULL) {
-            HAL_DMA_Abort(huart->hdmatx);
-            free(uart_tx_buf->send_buf);
-            uart_tx_buf->send_buf = NULL;
+            if (HAL_UART_AbortTransmit(huart) != HAL_OK) {
+                Error_Handler();
+                return;
+            }
             uart_tx_buf->head_ptr = 0U;
         }
     }
@@ -295,7 +399,7 @@ void uart_ex_deinit(UART_HandleTypeDef *huart) {
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
-#endif
+#endif /* __clang__ */
 
 /**
  * @brief Formatted print to the UART.
@@ -319,13 +423,20 @@ int uart_printf(UART_HandleTypeDef *huart, const char *__format, ...) {
     while (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) == RESET)
         ;
 
+    __HAL_RCC_D2SRAM1_CLK_ENABLE();
+    __HAL_RCC_D2SRAM2_CLK_ENABLE();
+    __HAL_RCC_D2SRAM3_CLK_ENABLE();
     va_start(ap, __format);
     res = vsnprintf(uart_buffer, sizeof(uart_buffer), __format, ap);
     va_end(ap);
+    if (res < 0) {
+        return res;
+    }
 
     len = strlen(uart_buffer);
 
     if (huart->hdmatx != NULL) {
+        __DSB();
         HAL_UART_Transmit_DMA(huart, (uint8_t *)uart_buffer, len);
     } else {
         HAL_UART_Transmit(huart, (uint8_t *)uart_buffer, len, 1000);
@@ -354,16 +465,24 @@ int uart_scanf(UART_HandleTypeDef *huart, const char *__format, ...) {
         return 0;
     }
 
+    __HAL_RCC_D2SRAM1_CLK_ENABLE();
+    __HAL_RCC_D2SRAM2_CLK_ENABLE();
+    __HAL_RCC_D2SRAM3_CLK_ENABLE();
     if (huart->hdmarx != NULL) {
         while (str_len == 0) {
-            str_len = uart_dmarx_read(huart, uart_buffer, sizeof(uart_buffer));
+            str_len = uart_dmarx_read(huart, uart_buffer,
+                                     sizeof(uart_buffer) - 1U);
         }
     } else {
-        HAL_UARTEx_ReceiveToIdle(huart, (uint8_t *)uart_buffer,
-                                 sizeof(uart_buffer), &str_len, 0xFFFF);
+        if (HAL_UARTEx_ReceiveToIdle(huart, (uint8_t *)uart_buffer,
+                                    sizeof(uart_buffer) - 1U, &str_len,
+                                    0xFFFF) != HAL_OK) {
+            return EOF;
+        }
     }
 
     va_start(ap, __format);
+    uart_buffer[str_len] = '\0';
     res = vsscanf((char *)uart_buffer, __format, ap);
     va_end(ap);
 
@@ -451,7 +570,8 @@ static inline uart_rx_fifo_t *uart_rx_identify(UART_HandleTypeDef *huart) {
  */
 void uart_dmarx_idle_callback(UART_HandleTypeDef *huart) {
     uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
-    if (uart_rx_fifo == NULL) {
+    if (uart_rx_fifo == NULL || uart_rx_fifo->rx_fifo == NULL ||
+        huart->hdmarx == NULL || huart->RxXferSize == 0U) {
         return;
     }
 
@@ -484,7 +604,8 @@ void uart_dmarx_idle_callback(UART_HandleTypeDef *huart) {
  */
 void uart_dmarx_halfdone_callback(UART_HandleTypeDef *huart) {
     uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
-    if (uart_rx_fifo == NULL) {
+    if (uart_rx_fifo == NULL || uart_rx_fifo->rx_fifo == NULL ||
+        huart->RxXferSize == 0U) {
         return;
     }
 
@@ -517,7 +638,8 @@ void uart_dmarx_halfdone_callback(UART_HandleTypeDef *huart) {
  */
 void uart_dmarx_done_callback(UART_HandleTypeDef *huart) {
     uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
-    if (uart_rx_fifo == NULL) {
+    if (uart_rx_fifo == NULL || uart_rx_fifo->rx_fifo == NULL ||
+        huart->RxXferSize == 0U) {
         return;
     }
 
@@ -566,7 +688,7 @@ uint32_t uart_dmarx_read(UART_HandleTypeDef *huart, void *buf,
     }
     uart_rx_fifo_t *uart_rx_fifo = uart_rx_identify(huart);
 
-    if (uart_rx_fifo == NULL) {
+    if (uart_rx_fifo == NULL || uart_rx_fifo->rx_fifo == NULL) {
         return 0;
     }
 
@@ -583,15 +705,17 @@ uint32_t uart_dmarx_read(UART_HandleTypeDef *huart, void *buf,
  * @retval - 0: Success
  * @retval - 1: This uart not enable DMA Rx.
  * @retval - 2: This UART is enabled.
- * @retval - 3: Parameter Error, size can't be 0.
- * @warning Must be disabled the UART before resize!
- *          You should call `u(s)artx_deinit()` before call this function,
- *          than call `u(s)artx_init()` to using new size.
- *          It may allocated fail when reinitialize uart.
+ * @retval - 3: Zero size or FIFO size not a supported power of two.
+ * @retval - 4: DMA length exceeds the fixed storage capacity.
+ * @warning Call uart_ex_deinit() before resizing, then uart_ex_uart_init().
+ *          DMA length cannot exceed the configured array capacity.
+ *          FIFO storage is allocated again during initialization.
  */
 uint8_t uart_dmarx_resize_fifo(UART_HandleTypeDef *huart, uint32_t buf_size,
                                uint32_t fifo_size) {
-    if ((buf_size == 0) || (fifo_size == 0)) {
+    if ((buf_size == 0) || (fifo_size == 0) ||
+        (fifo_size > (UINT32_MAX >> 1)) ||
+        ((fifo_size & (fifo_size - 1U)) != 0U)) {
         return 3;
     }
 
@@ -600,7 +724,10 @@ uint8_t uart_dmarx_resize_fifo(UART_HandleTypeDef *huart, uint32_t buf_size,
         return 1;
     }
 
-    if (huart->hdmatx != NULL) {
+    if (buf_size > uart_rx_fifo->capacity || buf_size > UINT16_MAX) {
+        return 4;
+    }
+    if (uart_rx_fifo->rx_fifo != NULL) {
         return 2;
     }
 
@@ -774,7 +901,11 @@ uint32_t uart_dmatx_send(UART_HandleTypeDef *huart) {
     while (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) == RESET)
         ;
 
-    HAL_UART_Transmit_DMA(huart, send_tx_buf->send_buf, (uint16_t)len);
+    __DSB();
+    if (HAL_UART_Transmit_DMA(huart, send_tx_buf->send_buf,
+                              (uint16_t)len) != HAL_OK) {
+        return 0;
+    }
     send_tx_buf->head_ptr = 0;
     return len;
 }
@@ -787,7 +918,7 @@ uint32_t uart_dmatx_send(UART_HandleTypeDef *huart) {
  * @return Resize message:
  * @retval - 0: Success
  * @retval - 1: This uart not enable DMA Tx.
- * @retval - 2: No free memory to allocate.
+ * @retval - 2: Size exceeds fixed DMA storage capacity.
  * @retval - 3: This uart is busy now.
  * @retval - 4: Parameter error, size can't be 0.
  */
@@ -807,19 +938,12 @@ uint8_t uart_dmatx_resize_buf(UART_HandleTypeDef *huart, uint32_t size) {
         return 3;
     }
 
-    /* The UART is uninitialized, just adjust the size. */
-    if (huart->hdmatx == NULL) {
-        send_tx_buf->buf_size = size;
-        return 0;
-    }
-
-    uint8_t *new_ptr = realloc(send_tx_buf->send_buf, size);
-
-    if (new_ptr == NULL) {
+    if (size > send_tx_buf->capacity || size > UINT16_MAX) {
         return 2;
     }
-
-    send_tx_buf->send_buf = new_ptr;
+    if (size < send_tx_buf->head_ptr) {
+        return 3;
+    }
     send_tx_buf->buf_size = size;
 
     return 0;
@@ -881,18 +1005,16 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     __HAL_UART_FLUSH_DRREGISTER(huart);
 
     uart_rx_fifo_t *rx = uart_rx_identify(huart);
-    if ((rx == NULL) || (huart->hdmarx == NULL) || (rx->recv_buf == NULL) ||
-        (rx->buf_size == 0U)) {
+    if ((rx == NULL) || (rx->rx_fifo == NULL) ||
+        (huart->hdmarx == NULL)) {
         return;
     }
 
     (void)HAL_UART_AbortReceive(huart);
 
     rx->head_ptr = 0U;
-    if (rx->rx_fifo != NULL) {
-        rx->rx_fifo->head = 0U;
-        rx->rx_fifo->tail = 0U;
-    }
+    rx->rx_fifo->head = 0U;
+    rx->rx_fifo->tail = 0U;
 
     for (uint32_t i = 0U; i < 3U; i++) {
         if (HAL_UART_Receive_DMA(huart, rx->recv_buf, rx->buf_size) == HAL_OK) {
