@@ -45,8 +45,8 @@ void start_task(void *pvParameters) {
     xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
 
 
-    vTaskDelete(start_task_handle);
     taskEXIT_CRITICAL();
+    vTaskDelete(start_task_handle);
 }
 
 /**
