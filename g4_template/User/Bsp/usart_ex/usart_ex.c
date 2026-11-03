@@ -298,6 +298,9 @@ int uart_printf(UART_HandleTypeDef *huart, const char *__format, ...) {
     va_start(ap, __format);
     res = vsnprintf(uart_buffer, sizeof(uart_buffer), __format, ap);
     va_end(ap);
+    if (res < 0) {
+        return res;
+    }
 
     len = strlen(uart_buffer);
 
