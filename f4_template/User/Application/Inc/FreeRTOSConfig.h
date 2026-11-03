@@ -252,10 +252,10 @@ extern uint32_t FreeRTOSRunTimeTicks;
 #define configMAX_API_CALL_INTERRUPT_PRIORITY                                  \
     configMAX_SYSCALL_INTERRUPT_PRIORITY
 
-// /* 断言 */
-// #define configASSERT(x)                                                        \
-//     if ((x) == 0)                                                              \
-//     vAssertCalled(__FILE__, __LINE__)
+/* 断言 */
+#define configASSERT(x)                                                        \
+    if ((x) == 0)                                                              \
+    vAssertCalled(__FILE__, __LINE__)
 
 #ifdef configASSERT
 extern void vAssertCalled(const char *pcFile, unsigned int ulLine);
