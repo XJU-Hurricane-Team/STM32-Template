@@ -47,7 +47,6 @@ virtualFolder:
     - name: Utils
       files:
         - path: User/Utils/ring_fifo/ring_fifo.c
-        - path: User/Utils/logger/logger.c
       folders: []
     - name: CMSIS
       files: []
