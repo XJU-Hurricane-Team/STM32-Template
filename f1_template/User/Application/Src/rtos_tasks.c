@@ -126,11 +126,14 @@ void task3(void *pvParameters) {
  * @brief FreeRTOS assert failed function. 
  * 
  * @param pcFile File name
+ * @note  断言失败后内核状态已经不可信，直接停机，不再返回调用点。
+ *
  * @param ulLine File line
  */
 void vAssertCalled(const char *pcFile, unsigned int ulLine) {
     fprintf(stderr, "FreeRTOS assert failed. File: %s, line: %u. \n", pcFile,
             ulLine);
+    Error_Handler();
 }
 #endif /* configASSERT */
 
