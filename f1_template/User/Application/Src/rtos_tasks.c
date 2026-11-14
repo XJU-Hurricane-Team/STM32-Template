@@ -8,16 +8,12 @@
 
 #include "includes.h"
 
-static TaskHandle_t start_task_handle;
 void start_task(void *pvParameters);
 
-static TaskHandle_t task1_handle;
 void task1(void *pvParameters);
 
-static TaskHandle_t task2_handle;
 void task2(void *pvParameters);
 
-static TaskHandle_t task3_handle;
 void task3(void *pvParameters);
 
 /*****************************************************************************/
@@ -27,7 +23,7 @@ void task3(void *pvParameters);
  *
  */
 void freertos_start(void) {
-    xTaskCreate(start_task, "start_task", 128, NULL, 2, &start_task_handle);
+    APP_TASK_CREATE(start_task, 128, 2);
     vTaskStartScheduler();
 }
 
@@ -40,12 +36,12 @@ void start_task(void *pvParameters) {
     UNUSED(pvParameters);
     taskENTER_CRITICAL();
 
-    xTaskCreate(task1, "task1", 128, NULL, 2, &task1_handle);
-    xTaskCreate(task2, "task2", 128, NULL, 2, &task2_handle);
-    xTaskCreate(task3, "task3", 128, NULL, 2, &task3_handle);
+    APP_TASK_CREATE(task1, 128, 2);
+    APP_TASK_CREATE(task2, 128, 2);
+    APP_TASK_CREATE(task3, 128, 2);
 
     taskEXIT_CRITICAL();
-    vTaskDelete(start_task_handle);
+    vTaskDelete(NULL);
 }
 
 /**

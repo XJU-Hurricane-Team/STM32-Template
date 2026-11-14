@@ -8,16 +8,12 @@
 
 #include "includes.h"
 
-static TaskHandle_t start_task_handle;
 void start_task(void *pvParameters);
 
-static TaskHandle_t task_alive_handle;
 void task_alive(void *pvParameters);
 
-static TaskHandle_t task_uart_test_handle;
 void task_uart_test(void *pvParameters);
 
-static TaskHandle_t task_key_test_handle;
 void task_key_test(void *pvParameters);
 
 UART_HandleTypeDef *const test_uart = &huart1;
@@ -29,7 +25,7 @@ UART_HandleTypeDef *const test_uart = &huart1;
  *
  */
 void freertos_start(void) {
-    xTaskCreate(start_task, "start_task", 512, NULL, 2, &start_task_handle);
+    APP_TASK_CREATE(start_task, 512, 2);
     vTaskStartScheduler();
 }
 
@@ -42,14 +38,12 @@ void start_task(void *pvParameters) {
     UNUSED(pvParameters);
     taskENTER_CRITICAL();
 
-    xTaskCreate(task_alive, "task_alive", 128, NULL, 2, &task_alive_handle);
-    xTaskCreate(task_uart_test, "task_uart_test", 512, NULL, 2,
-                &task_uart_test_handle);
-    xTaskCreate(task_key_test, "task_key_test", 512, NULL, 2,
-                &task_key_test_handle);
+    APP_TASK_CREATE(task_alive, 128, 2);
+    APP_TASK_CREATE(task_uart_test, 512, 2);
+    APP_TASK_CREATE(task_key_test, 512, 2);
 
     taskEXIT_CRITICAL();
-    vTaskDelete(start_task_handle);
+    vTaskDelete(NULL);
 }
 
 /**
