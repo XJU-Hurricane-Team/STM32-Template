@@ -18,6 +18,9 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
